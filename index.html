@@ -609,7 +609,12 @@ const PRIO={high:'Высокий',mid:'Обычный',low:'Низкий'};
 const KEY='zindagi.v1';
 let DB=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}})();
 let saveT;
-const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}};
+/* копия аккаунта, привязанного к боту: по ней работает «Войти» после выхода из аккаунта */
+const accKey=id=>'zindagi.acc.'+id;
+function accSave(){try{if(DB&&DB.user&&DB.user.tgChat&&DB.user.telegramUserId)localStorage.setItem(accKey(DB.user.telegramUserId),JSON.stringify(DB))}catch(e){}}
+function accLoad(id){try{const v=JSON.parse(localStorage.getItem(accKey(id)));return v&&v.user?v:null}catch(e){return null}}
+function accWipe(){try{if(DB&&DB.user&&DB.user.telegramUserId)localStorage.removeItem(accKey(DB.user.telegramUserId))}catch(e){}}
+const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}accSave()};
 const save=()=>{clearTimeout(saveT);DB._ts=Date.now();saveT=setTimeout(()=>{saveLocal();if(typeof cloudPush==='function')cloudPush()},80)};
 const hasUser=()=>!!(DB&&DB.user);
 async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))|0;return'f'+(h>>>0).toString(16)}}
@@ -796,6 +801,17 @@ const FIREBASE_CONFIG={
 };
 const API_BASE='https://us-central1-zindagi-1c81c.cloudfunctions.net/api';
 const BOT_USERNAME='zindagiRObot';
+/* ===== Telegram-бот ===== */
+const TG_TOKEN='';   /* токен бота от @BotFather — обязательно. Пока пусто, регистрация работает как раньше */
+const TG_CHAT='';    /* ваш chat id — необязательно: сюда приходят уведомления о новых регистрациях */
+const BOT_READY=!!TG_TOKEN;
+const tgApi=async(method,body)=>{const r=await fetch('https://api.telegram.org/bot'+TG_TOKEN+'/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const j=await r.json();if(!j.ok)throw Object.assign(new Error(j.description||'telegram'),{code:j.error_code});return j.result};
+async function tgSend(text,chat){if(!BOT_READY||!chat)return false;try{await tgApi('sendMessage',{chat_id:chat,text});return true}catch(e){return false}}
+const tgAdmin=text=>TG_CHAT?tgSend(text,TG_CHAT):Promise.resolve(false);
+/* ищет в обновлениях бота сообщение «/start <token>» — так бот узнаёт, кто нажал Start */
+async function tgFindStart(token){const upd=await tgApi('getUpdates',{offset:-100,limit:100,allowed_updates:['message']});
+  for(const u of upd){const m=u.message;if(m&&m.chat&&m.chat.type==='private'&&m.from&&typeof m.text==='string'){const x=m.text.trim().match(/^\/start(?:@\w+)?\s+(\S+)$/);if(x&&x[1]===token)return m}}return null}
+const newStartToken=()=>{const a=new Uint8Array(16);try{crypto.getRandomValues(a)}catch(e){for(let i=0;i<16;i++)a[i]=Math.random()*256}return Array.from(a,x=>x.toString(16).padStart(2,'0')).join('')};
 let FB=null;
 try{if(window.firebase){firebase.initializeApp(FIREBASE_CONFIG);FB={auth:firebase.auth(),db:firebase.database()}}}catch(e){console.warn('Firebase init failed',e)}
 
@@ -836,9 +852,9 @@ async function cloudWipe(){
   try{await FB.db.ref().update(upd)}catch(e){}try{await api('/account/delete',{auth:true,body:{}})}catch(e){}try{await FB.auth.signOut()}catch(e){}}
 
 /* Telegram notifications (sent by the server through the bot) */
-function tgNotify(text){if(!cloudOn()||DB.notif===false)return;api('/notify',{auth:true,body:{text}}).catch(()=>{})}
+function tgNotify(text){if(DB.notif===false)return;const c=DB.user&&DB.user.tgChat;if(BOT_READY&&c){tgSend(text,c);return}if(!cloudOn())return;api('/notify',{auth:true,body:{text}}).catch(()=>{})}
 function dailyChecks(){
-  if(!cloudOn()||DB.notif===false)return;const day=iso(Date.now());if(DB.lastCheck===day)return;DB.lastCheck=day;save();
+  if(!(cloudOn()||(BOT_READY&&DB.user&&DB.user.tgChat))||DB.notif===false)return;const day=iso(Date.now());if(DB.lastCheck===day)return;DB.lastCheck=day;save();
   const td=sod(),now=Date.now(),L=[],T=DB.tasks||[];
   const over=T.filter(t=>!t.completed&&t.dueAt<td).length,today=T.filter(t=>!t.completed&&t.dueAt>=td&&t.dueAt<td+DAY).length;
   if(over)L.push(`⚠️ Просроченных задач: ${over}`);if(today)L.push(`✅ Задач на сегодня: ${today}`);
@@ -910,11 +926,15 @@ function renderAuth(){
   ({welcome:authWelcome,tg:authTg,pin:authPin,bio:authBio,lock:authLock}[UI.phase]||authWelcome)(A)}
 function enterApp({welcome=false}={}){UI.phase='app';UI.route='home';UI.stack=[];UI.enter=true;UI.shownBal=null;UI.chat=[];UI.pending=null;applyTheme();renderAuth();render();
   if(welcome)toast(DB.seeded?`Добро пожаловать, ${first()}! Мы добавили демо-данные`:REG.returning?`С возвращением, ${first()}!`:`Добро пожаловать, ${first()}!`);
-  if(typeof cloudSync==='function')cloudSync()}
+  if(typeof cloudSync==='function')cloudSync();if(BOT_READY&&DB.user&&DB.user.tgChat&&!DB.user.cloud)dailyChecks()}
 function startDemo(){DB={theme:DB.theme||'system'};DB.user={id:'u_demo',name:'Алишер Рахмонов',phone:'900123456',telegramUserId:'tg_demo',telegramVerified:true,phoneVerified:true,language:'ru',currency:'TJS',plan:'free',createdAt:Date.now(),updatedAt:Date.now(),demo:true};
   DB.salt=uid();seedData();save();enterApp({welcome:true})}
 function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}try{if(FB)FB.auth.signOut().catch(()=>{})}catch(e){}const th=DB.theme;DB={theme:th};Object.assign(REG,{name:'',phone:'',sent:false,pin1:null,code:null,otpHash:null});UI.chat=[];UI.pending=null;UI.lockFails=0;setPhase('welcome')}
 
+function startLogin(){Object.assign(REG,{login:true,viaBot:true,name:'',sessionId:uid()+uid(),token:'',live:false,sent:false,code:null,otpHash:null,attempts:0,used:false,pin1:null,returning:false,startToken:newStartToken(),chatId:null,tgId:null,tgName:'',tgUser:''});
+  REG.link='https://t.me/'+BOT_USERNAME+'?start='+REG.startToken;
+  try{window.open(REG.link,'_blank','noopener')}catch(e){}   /* сразу открываем Telegram */
+  setPhase('tg')}
 function authWelcome(A){
   A.innerHTML=`<div class="ahero"><div class="abg">${heroSVG('a')}</div><div class="mkt"><img src="${MARK}" alt="ZINDAGI"></div></div>
   <div class="body" style="padding-top:52px">
@@ -924,6 +944,7 @@ function authWelcome(A){
     <label class="fld"><span>Телефон</span><div class="phone"><div class="cc">+992</div><input class="inp" id="r_phone" inputmode="tel" placeholder="00 000 00 00" autocomplete="tel-national" value="${esc(REG.phone.replace(/^(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})$/,(m,a,b,c,d)=>[a,b,c,d].filter(Boolean).join(' ')))}"></div></label>
     <div class="ferr" role="alert" id="r_err"></div>
     <button class="btn pri blk" id="r_go">Продолжить</button>
+    ${BOT_READY?`<button class="btn line blk" id="r_login" style="margin-top:10px">Уже есть аккаунт? Войти</button>`:''}
     <div class="center" style="margin-top:10px"><button class="link" id="r_demo">Посмотреть демо без регистрации</button></div>
     <p class="small center" style="margin-top:auto;padding-top:18px">Продолжая, вы принимаете условия использования и политику конфиденциальности.</p>
   </div>`;
@@ -931,28 +952,35 @@ function authWelcome(A){
   ph.addEventListener('input',()=>{const d=ph.value.replace(/\D/g,'').slice(0,9);ph.value=d.replace(/^(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2}).*$/,(m,a,b,c,e)=>[a,b,c,e].filter(Boolean).join(' '))});
   const go=async()=>{const n=nm.value.trim(),p=ph.value.replace(/\D/g,'');nm.classList.toggle('err',n.length<2);ph.classList.toggle('err',p.length!==9);
     if(n.length<2){er.textContent='Введите имя';nm.focus();return}if(p.length!==9){er.textContent='Введите номер полностью: 9 цифр после +992';ph.focus();return}
-    Object.assign(REG,{name:n,phone:p,sessionId:uid()+uid(),token:'',link:'',live:false,sent:false,code:null,otpHash:null,attempts:0,used:false,pin1:null,returning:false});
+    Object.assign(REG,{name:n,phone:p,sessionId:uid()+uid(),token:'',link:'',live:false,sent:false,code:null,otpHash:null,attempts:0,used:false,pin1:null,returning:false,viaBot:false,startToken:'',chatId:null,tgId:null,tgName:'',tgUser:'',login:false});
+    if(BOT_READY){REG.viaBot=true;REG.startToken=newStartToken();REG.link='https://t.me/'+BOT_USERNAME+'?start='+REG.startToken;
+      try{window.open(REG.link,'_blank','noopener')}catch(e){}   /* открываем Telegram сразу по нажатию */
+      return setPhase('tg')}
     if(!FB)return setPhase('tg');
     const btn=$('#r_go',A);btn.disabled=true;btn.textContent='Подготовка…';
     try{const r=await api('/register/start',{body:{name:n,phone:p}});Object.assign(REG,{live:true,token:r.token,link:r.botLink});setPhase('tg')}
     catch(e){btn.disabled=false;btn.textContent='Продолжить';er.innerHTML='Сервер регистрации недоступен. <button class="link" id="r_off" style="min-height:32px;padding:0">Продолжить в демо-режиме</button>';$('#r_off',A).onclick=()=>setPhase('tg')}};
-  $('#r_go',A).onclick=go;A.onkeydown=e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT')go()};$('#r_demo',A).onclick=startDemo}
+  $('#r_go',A).onclick=go;A.onkeydown=e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT')go()};$('#r_demo',A).onclick=startDemo;if(BOT_READY)$('#r_login',A).onclick=startLogin}
 
 async function sendOtp(){let r;try{r=crypto.getRandomValues(new Uint32Array(1))[0]}catch(e){r=Math.floor(Math.random()*4e9)}
   const code=String(100000+r%900000);REG.code=code;REG.otpHash=await sha(REG.sessionId+code);REG.expiresAt=Date.now()+5*MIN;REG.resendAt=Date.now()+30000;REG.attempts=0;REG.used=false;REG.sent=true}
+async function botCode(){const old={sent:REG.sent,code:REG.code,otpHash:REG.otpHash,expiresAt:REG.expiresAt,resendAt:REG.resendAt,attempts:REG.attempts,used:REG.used};
+  await sendOtp();
+  const ok=await tgSend(`👋 ${REG.tgName||REG.name?(REG.tgName||REG.name)+', здравствуйте!':'Здравствуйте!'}\n🔐 Ваш код для входа в ZINDAGI: ${REG.code}\n\nДействует 5 минут. Никому не сообщайте.`,REG.chatId);
+  if(!ok)Object.assign(REG,old);return ok}
 function authTg(A){
   const s=REG.sent,live=REG.live;
   A.innerHTML=`<div class="body"><div style="margin-bottom:14px"><button class="ib" id="t_back" aria-label="Назад">${ic('back')}</button></div>
-    <div class="steps" role="img" aria-label="Шаг 2 из 4">${steps(2)}</div>
-    <h1>Подтвердите Telegram</h1>
-    ${s?`<p class="lead">${live?`Код отправлен в Telegram-бот @${BOT_USERNAME}. Введите его ниже.`:'Код отправлен в Telegram. Введите его ниже.'}</p>
-      ${live?'':`<div class="tg"><div class="ta"><img src="${MARK}" alt=""></div><div><b>ZindagiBot</b><p>Ваш код ZINDAGI: ${REG.code}\nКод действует 5 минут.\nНикому его не сообщайте.</p><small>Демо-режим: сервер недоступен, поэтому код показан здесь. В рабочем режиме он приходит только в Telegram.</small></div></div>`}
+    ${REG.login?'':`<div class="steps" role="img" aria-label="Шаг 2 из 4">${steps(2)}</div>`}
+    <h1>${REG.login?'Вход через Telegram':'Подтвердите Telegram'}</h1>
+    ${s?`<p class="lead">${live||REG.viaBot?`Код отправлен в Telegram-бот @${BOT_USERNAME}. Введите его ниже.`:'Код отправлен в Telegram. Введите его ниже.'}</p>
+      ${live||REG.viaBot?'':`<div class="tg"><div class="ta"><img src="${MARK}" alt=""></div><div><b>ZindagiBot</b><p>Ваш код ZINDAGI: ${REG.code}\nКод действует 5 минут.\nНикому его не сообщайте.</p><small>Демо-режим: сервер недоступен, поэтому код показан здесь. В рабочем режиме он приходит только в Telegram.</small></div></div>`}
       <div class="otp" id="otp">${[0,1,2,3,4,5].map(i=>`<input inputmode="numeric" maxlength="1" ${i===0?'autocomplete="one-time-code"':''} aria-label="Цифра ${i+1}">`).join('')}</div>
       <div class="msgline" id="t_err" role="alert"></div>
       <button class="btn pri blk" id="t_ok">Подтвердить</button>
       <div class="center small" id="t_info" style="margin-top:14px"></div>
       <div class="center"><button class="link" id="t_re"></button></div>`
-    :live?`<p class="lead">Откройте бота и нажмите «Start». Код придёт в чат, а эта страница обновится сама.</p>
+    :live||REG.viaBot?`<p class="lead">Откройте бота и нажмите «Start». Код придёт в чат, а эта страница обновится сама.</p>
       <a class="btn pri blk" id="t_link" href="${esc(REG.link)}" target="_blank" rel="noopener">${ic('telegram')}Открыть Telegram</a>
       <div class="msgline" id="t_st" role="status" style="margin-top:16px">Ждём, пока вы нажмёте Start в боте…</div>`
     :`<p class="lead">Откройте Telegram Bot, чтобы получить код.</p>
@@ -961,6 +989,27 @@ function authTg(A){
   </div>`;
   $('#t_back',A).onclick=()=>setPhase('welcome');
   if(!s){
+    if(REG.viaBot){
+      const st=$('#t_st',A),t0=Date.now();let busy=false,dead=false,timer;
+      const fail=m=>{st.textContent=m;st.classList.add('bad');stop()};
+      const stop=()=>{dead=true;clearTimeout(timer);document.removeEventListener('visibilitychange',vis)};
+      const tick=async()=>{if(dead||busy)return;
+        if(!st.isConnected||UI.phase!=='tg'){stop();return}
+        if(Date.now()-t0>10*MIN)return fail('Ссылка устарела. Вернитесь назад и начните заново.');
+        busy=true;
+        try{const m=await tgFindStart(REG.startToken);
+          if(m){Object.assign(REG,{tgId:m.from.id,chatId:m.chat.id,tgName:m.from.first_name||'',tgUser:m.from.username||''});
+            if(REG.login){const acc=accLoad(m.from.id);
+              if(!acc){stop();tgSend('Аккаунт ZINDAGI для этого Telegram на этом устройстве не найден. Вернитесь в приложение и зарегистрируйтесь.',m.chat.id);
+                st.innerHTML='Аккаунт не найден на этом устройстве. <button class="link" id="t_reg" style="min-height:32px;padding:0">Зарегистрироваться</button>';st.classList.add('bad');$('#t_reg',A).onclick=()=>setPhase('welcome');return}
+              REG.name=acc.user.name||''}
+            if(await botCode()){stop();renderAuth();return}
+            return fail('Не удалось отправить код в чат с ботом. Вернитесь назад и повторите.')}}
+        catch(e){if(e.code===401||e.code===404)return fail('Неверный токен бота (TG_TOKEN).');
+          if(e.code===409)return fail('У бота включён webhook — для этого режима он должен быть отключён.')}
+        busy=false;clearTimeout(timer);timer=setTimeout(tick,2000)};
+      const vis=()=>{if(!document.hidden){clearTimeout(timer);tick()}};
+      document.addEventListener('visibilitychange',vis);timer=setTimeout(tick,1500);return}
     if(!live){$('#t_open',A).onclick=async()=>{try{window.open('https://t.me/'+BOT_USERNAME,'_blank','noopener')}catch(e){}await sendOtp();renderAuth()};return}
     const st=$('#t_st',A);
     const poll=async()=>{if(!st.isConnected||UI.phase!=='tg')return;
@@ -980,8 +1029,13 @@ function authTg(A){
     REG.attempts++;const h=await sha(REG.sessionId+v);
     if(h!==REG.otpHash){const left=5-REG.attempts;otp.clear();return bad(left>0?`Неверный код. Осталось попыток: ${left}`:'Слишком много попыток. Запросите новый код.')}
     REG.used=true;REG.otpHash=null;REG.code=null;
+    if(REG.login){const acc=accLoad(REG.tgId);if(!acc)return bad('Аккаунт не найден. Вернитесь назад и зарегистрируйтесь.');
+      const th=DB.theme||'system';DB=acc;DB.theme=th;Object.assign(DB.user,{tgChat:REG.chatId,tgUsername:REG.tgUser});REG.returning=true;
+      tgSend('🔑 Выполнен вход в ZINDAGI.',REG.chatId);finish();return}
     DB={theme:DB.theme||'system'};DB.user={id:'u_'+uid()+uid(),name:REG.name,phone:REG.phone,telegramUserId:'tg_'+(100000000+Math.floor(Math.random()*899999999)),telegramVerified:true,phoneVerified:true,language:'ru',currency:'TJS',plan:'free',createdAt:Date.now(),updatedAt:Date.now()};
-    seedData();finish()};
+    if(REG.viaBot){Object.assign(DB.user,{telegramUserId:String(REG.tgId),tgChat:REG.chatId,tgUsername:REG.tgUser,phoneVerified:false});blankData();
+      tgSend('✅ Аккаунт ZINDAGI привязан к этому чату. Сюда будут приходить уведомления о расходах, задачах и целях.',REG.chatId);
+      tgAdmin(`🆕 Новая регистрация: ${REG.name} · ${phoneFmt(REG.phone)}${REG.tgUser?' · @'+REG.tgUser:''} · id ${REG.tgId}`)}else seedData();finish()};
   const verifyLive=async v=>{
     try{const res=await api('/register/verify',{body:{token:REG.token,code:v}});
       await FB.auth.signInWithCustomToken(res.customToken);
@@ -996,7 +1050,7 @@ function authTg(A){
       else bad('Не удалось связаться с сервером. Проверьте интернет и повторите.')}};
   const verify=async()=>{err.classList.remove('bad');const v=otp.val();if(v.length<6)return bad('Введите все 6 цифр');okb.disabled=true;try{await(live?verifyLive(v):verifyLocal(v))}finally{okb.disabled=false}};
   okb.onclick=verify;A.onkeydown=e=>{if(e.key==='Enter')verify()};
-  re.onclick=async()=>{if(!live){await sendOtp();renderAuth();return}
+  re.onclick=async()=>{if(!live){if(REG.viaBot){if(!await botCode()){bad('Не удалось отправить код через бота. Повторите позже.');return}renderAuth();return}await sendOtp();renderAuth();return}
     try{const r=await api('/register/resend',{body:{token:REG.token}});Object.assign(REG,{expiresAt:r.expiresAt,resendAt:r.resendAt});renderAuth()}
     catch(e){bad(e.code==='cooldown'?'Подождите немного перед повторной отправкой.':'Не удалось отправить код. Повторите позже.')}};
   const iv=setInterval(()=>{if(!info.isConnected){clearInterval(iv);return}const left=REG.expiresAt-Date.now(),rs=Math.max(0,Math.ceil((REG.resendAt-Date.now())/1000));
@@ -1025,7 +1079,7 @@ function authLock(A){
     UI.lockFails++;if(UI.lockFails>=5){UI.lockFails=0;UI.lockUntil=now+30000;return{ok:false,msg:'Слишком много попыток. Повторите через 30 с'}}
     return{ok:false,msg:`Неверный PIN. Осталось попыток: ${5-UI.lockFails}`}},
     onBio:()=>{toast('Face ID подтверждён (демо)');setTimeout(()=>enterApp(),500)}});
-  $('#l_out',A).onclick=()=>confirmSheet({title:'Выйти из аккаунта?',text:'Данные на этом устройстве будут удалены. Войти можно будет через новую регистрацию.',ok:'Выйти',danger:true,onOk:resetAll})}
+  $('#l_out',A).onclick=()=>confirmSheet({title:'Выйти из аккаунта?',text:DB.user&&DB.user.tgChat?'Данные сохранятся на этом устройстве. Чтобы вернуться, нажмите «Войти» и подтвердите Telegram — заодно создадите новый PIN.':'Данные на этом устройстве будут удалены. Войти можно будет через новую регистрацию.',ok:'Выйти',danger:true,onOk:resetAll})}
 
 /* ============ screens ============ */
 const SCREENS={};
@@ -1463,10 +1517,11 @@ const ACT={
   changePin,
   toggleBio(){DB.bio=!DB.bio;save();render();toast(DB.bio?'Face ID включён (демо)':'Face ID выключен')},
   toggleNotif(){DB.notif=DB.notif===false;save();render()},
-  telegram(){const live=cloudOn();openSheet(`<h2 class="sh-h">Telegram</h2><div class="tg"><div class="ta"><img src="${MARK}" alt=""></div><div><b>@${BOT_USERNAME}</b><p>${live?'Уведомления приходят в этот чат: расходы, доходы, цели, события и напоминания.':'Облачная синхронизация и уведомления выключены (демо-режим).'}</p></div></div>
+  telegram(){const live=cloudOn()||(BOT_READY&&DB.user&&DB.user.tgChat);openSheet(`<h2 class="sh-h">Telegram</h2><div class="tg"><div class="ta"><img src="${MARK}" alt=""></div><div><b>@${BOT_USERNAME}</b><p>${live?'Уведомления приходят в этот чат: расходы, доходы, цели, события и напоминания.':'Облачная синхронизация и уведомления выключены (демо-режим).'}</p></div></div>
     ${live?`<a class="btn line blk" href="https://t.me/${BOT_USERNAME}" target="_blank" rel="noopener" style="margin-bottom:10px">${ic('telegram')}Открыть бота</a><button class="btn soft blk" data-act="tgTest" style="margin-bottom:14px">Отправить тестовое уведомление</button>`:''}
     <p class="sh-p">Команды бота:</p><div class="list" style="margin:0;padding:0 14px">${[['/balance','Баланс'],['/expenses','Последние расходы'],['/tasks','Мои задачи'],['/goals','Мои цели'],['/help','Помощь']].map(([c,d])=>`<div class="row" style="min-height:48px"><b class="grow">${c}</b><span class="muted">${d}</span></div>`).join('')}</div>`)},
-  tgTest(){if(!cloudOn()){toast('Нужен вход через Telegram-бота',{plain:true});return}
+  tgTest(){if(BOT_READY&&DB.user&&DB.user.tgChat){tgSend('🔔 Тестовое уведомление ZINDAGI. Всё работает!',DB.user.tgChat).then(ok=>toast(ok?'Отправили — проверьте Telegram':'Не удалось отправить. Проверьте токен и chat id',{plain:!ok}));return}
+    if(!cloudOn()){toast('Нужен вход через Telegram-бота',{plain:true});return}
     api('/notify',{auth:true,body:{text:'🔔 Тестовое уведомление ZINDAGI. Всё работает!'}}).then(()=>toast('Отправили — проверьте Telegram')).catch(()=>toast('Не удалось отправить. Проверьте сервер',{plain:true}))},
   lang(){optionsSheet({title:'Язык',value:'ru',options:[{v:'ru',l:'Русский'},{v:'tg',l:'Тоҷикӣ',dis:1,note:'скоро'},{v:'en',l:'English',dis:1,note:'скоро'}],onPick(){}})},
   currency(){optionsSheet({title:'Валюта',value:'TJS',options:[{v:'TJS',l:'Сомони (с.)'},{v:'USD',l:'Доллар США',dis:1,note:'скоро'},{v:'RUB',l:'Российский рубль',dis:1,note:'скоро'}],onPick(){}})},
@@ -1476,9 +1531,9 @@ const ACT={
   exportData(){const d={...DB};delete d.pinHash;delete d.salt;const s=JSON.stringify(d,null,2);
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(s):Promise.reject()).then(()=>{closeSheet();toast('Данные скопированы в буфер обмена')}).catch(()=>toast('Не удалось скопировать. Разрешите доступ к буферу обмена',{plain:true}))},
   clearDemo(){confirmSheet({title:'Очистить демо-данные?',text:'Расходы, цели, задачи и другие записи будут удалены. Аккаунт останется.',ok:'Очистить',danger:true,onOk:()=>{clearData();toast('Данные очищены')}})},
-  deleteAcc(){confirmSheet({title:'Удалить аккаунт?',text:'Профиль и все данные (на устройстве и в облаке) будут удалены без возможности восстановления.',ok:'Удалить',danger:true,onOk:async()=>{await cloudWipe();resetAll()}})},
+  deleteAcc(){confirmSheet({title:'Удалить аккаунт?',text:'Профиль и все данные (на устройстве и в облаке) будут удалены без возможности восстановления.',ok:'Удалить',danger:true,onOk:async()=>{await cloudWipe();accWipe();resetAll()}})},
   help(){openSheet(`<h2 class="sh-h">Помощь</h2>${[['Как добавить расход?','Нажмите «Добавить» на главной или скажите AI: «Я потратил 120 сомони на еду».'],['Как поставить цель?','Откройте «Цели» и нажмите «+», либо напишите AI: «Создай цель накопить 20 000 сомони».'],['Что делать, если забыл PIN?','На экране входа нажмите «Забыли PIN? Выйти» и пройдите регистрацию заново.'],['Где мои данные?','В этой версии данные хранятся на вашем устройстве. Их можно очистить в разделе «Конфиденциальность».']].map(([q,a])=>`<div style="padding:12px 0;border-top:1px solid var(--border)"><div class="t1">${q}</div><div class="t2" style="font-size:14px;margin-top:4px">${a}</div></div>`).join('')}`)},
-  logout(){confirmSheet({title:'Выйти из аккаунта?',text:cloudOn()?'Данные останутся в облаке. Чтобы вернуться, подтвердите вход через Telegram.':'Данные на этом устройстве будут удалены. Войти можно будет через новую регистрацию.',ok:'Выйти',danger:true,onOk:resetAll})}
+  logout(){confirmSheet({title:'Выйти из аккаунта?',text:cloudOn()?'Данные останутся в облаке. Чтобы вернуться, подтвердите вход через Telegram.':(DB.user&&DB.user.tgChat?'Данные сохранятся на этом устройстве. Чтобы вернуться, нажмите «Войти» и подтвердите Telegram.':'Данные на этом устройстве будут удалены. Войти можно будет через новую регистрацию.'),ok:'Выйти',danger:true,onOk:resetAll})}
 };
 
 /* ============ global events ============ */
@@ -1491,7 +1546,7 @@ document.addEventListener('input',e=>{if(e.target.id==='docQ'){UI.docQ=e.target.
 
 /* ============ boot ============ */
 function boot(){
-  applyTheme();
+  applyTheme();accSave();
   if(hasUser()){UI.phase=DB.pinHash?'lock':'app'}else UI.phase='welcome';
   if(UI.phase==='app'){render();cloudSync()}renderAuth();
   setTimeout(()=>{const sp=$('#splash');if(!sp)return;sp.classList.add('out');setTimeout(()=>sp.remove(),520)},1500)}
