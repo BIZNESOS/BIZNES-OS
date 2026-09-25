@@ -1,0 +1,96 @@
+rules_version = '2';
+
+// ============================================================
+// Ledgerly — Firestore Security Rules
+// Logic: a "user" only ever touches records created by themselves
+// (createdBy == request.auth.uid); an "admin" (custom claim admin==true,
+// set only by the setUserRole Cloud Function) gets read/write everywhere.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function isOwner(resourceData) {
+      return isSignedIn() && resourceData.createdBy == request.auth.uid;
+    }
+    function isActive() {
+      // Blocked users lose all write access even while their session is alive.
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "active";
+    }
+
+    // ---- users ----
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid; // profile created right after Firebase Auth signup
+      // Only the owner may edit their own non-sensitive fields; only admins may change role/status.
+      allow update: if isAdmin() ||
+        (isSignedIn() && request.auth.uid == uid &&
+         request.resource.data.role == resource.data.role &&
+         request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin();
+    }
+
+    // ---- company-scoped accounting collections ----
+    match /{collection}/{docId}
+      where collection in [
+        "products","categories","customers","suppliers","sales","purchases",
+        "income","expenses","cash_transactions","bank_transactions","documents"
+      ] {
+      allow read: if isAdmin() || isOwner(resource.data);
+      allow create: if isActive() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin() || (isActive() && isOwner(resource.data));
+    }
+
+    // ---- currencies / exchange rates: admin-writable, everyone (signed-in) can read ----
+    match /currencies/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /exchange_rates/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- global settings (incl. Telegram bot username/flags, NOT the token) ----
+    match /settings/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ---- telegram_verification: never client-readable/writable; only Cloud Functions
+    //      (running with Admin SDK privileges) touch this collection. ----
+    match /telegram_verification/{docId} {
+      allow read, write: if false;
+    }
+
+    // ---- notifications: user reads their own, Cloud Functions/admin write ----
+    match /notifications/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    // ---- audit_logs: append-only, admin-readable ----
+    match /audit_logs/{docId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ---- companies ----
+    match /companies/{companyId} {
+      allow read: if isAdmin() || (isSignedIn() && companyId == request.auth.uid);
+      allow write: if isAdmin() || (isSignedIn() && companyId == request.auth.uid);
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
