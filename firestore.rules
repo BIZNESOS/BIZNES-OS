@@ -1,0 +1,113 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return isSignedIn() ? userDoc().data.role : null;
+    }
+
+    function isActive() {
+      return isSignedIn() && userDoc().data.status == 'active';
+    }
+
+    function isAdmin() {
+      return isActive() && role() == 'ADMIN';
+    }
+
+    function isAccountant() {
+      return isActive() && (role() == 'ACCOUNTANT' || role() == 'ADMIN');
+    }
+
+    function isManagerOrAbove() {
+      return isActive() && (role() in ['MANAGER', 'ACCOUNTANT', 'ADMIN']);
+    }
+
+    // Профиль пользователя: сам пользователь читает свои данные,
+    // но НЕ может менять role/status — это критично (ТЗ, раздел 31).
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status;
+      allow write: if isAdmin();
+      allow create: if false; // создание пользователя — только через Cloud Function
+    }
+
+    // Финансовые/бухгалтерские документы — бухгалтер и выше.
+    match /sales/{docId} {
+      allow read: if isManagerOrAbove();
+      allow create, update: if isAccountant();
+      allow delete: if isAdmin();
+    }
+
+    match /purchases/{docId} {
+      allow read: if isManagerOrAbove();
+      allow create, update: if isAccountant();
+      allow delete: if isAdmin();
+    }
+
+    match /cashbox/{docId} {
+      allow read: if isAccountant();
+      allow write: if isAccountant();
+    }
+
+    match /bank/{docId} {
+      allow read: if isAccountant();
+      allow write: if isAccountant();
+    }
+
+    // Операционные справочники — доступны менеджеру и выше на чтение.
+    match /products/{docId} {
+      allow read: if isManagerOrAbove();
+      allow write: if isAccountant();
+    }
+
+    match /warehouse/{docId} {
+      allow read: if isManagerOrAbove();
+      allow write: if isAccountant();
+    }
+
+    match /counterparties/{docId} {
+      allow read: if isManagerOrAbove();
+      allow write: if isAccountant();
+    }
+
+    // Расчётные агрегаты дашборда — только чтение, пишутся Cloud Functions.
+    match /aggregates/{docId} {
+      allow read: if isManagerOrAbove();
+      allow write: if false;
+    }
+
+    // Зарплата — только бухгалтер/админ, повышенная чувствительность.
+    match /payroll/{docId} {
+      allow read, write: if isAccountant();
+    }
+
+    // Audit log — пишет только сервер, читает только админ.
+    match /auditLog/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Настройки сайта и Telegram bot config — только админ, и то без
+    // доступа к секретам (токен бота хранится вне Firestore).
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // По умолчанию всё закрыто.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
