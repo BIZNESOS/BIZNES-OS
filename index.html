@@ -1,18 +1,2612 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <title>FINORA — учёт и финансы</title>
-  </head>
-  <body class="bg-paper text-ink">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>BuhSoft — Учёт всего в одном месте</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+/* ============================================================
+   CSS RESET & VARIABLES
+============================================================ */
+*,
+*::before,
+*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand-50:  #eef4ff;
+  --brand-100: #d9e6ff;
+  --brand-200: #b8d0ff;
+  --brand-300: #8eb1ff;
+  --brand-400: #5d88ff;
+  --brand-500: #3462f9;
+  --brand-600: #2247d6;
+  --brand-700: #1c39a9;
+  --brand-800: #1c348a;
+  --brand-900: #1c306f;
+
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+
+  --bg: #f5f7fb;
+  --bg-elev: #ffffff;
+  --bg-hover: #f0f3f9;
+  --bg-soft: #fafbfe;
+
+  --text: #0f172a;
+  --text-soft: #475569;
+  --text-muted: #94a3b8;
+
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
+  --shadow: 0 4px 16px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.04);
+  --shadow-lg: 0 12px 40px rgba(15,23,42,.10), 0 4px 12px rgba(15,23,42,.06);
+  --shadow-xl: 0 24px 60px rgba(15,23,42,.16);
+
+  --sidebar-w: 260px;
+  --topbar-h: 64px;
+
+  --t-fast: .15s cubic-bezier(.4,0,.2,1);
+  --t: .25s cubic-bezier(.4,0,.2,1);
+  --t-slow: .4s cubic-bezier(.4,0,.2,1);
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --bg-elev: #111a2e;
+  --bg-hover: #17203a;
+  --bg-soft: #0e1628;
+
+  --text: #e5ecf8;
+  --text-soft: #a4b1c9;
+  --text-muted: #64748b;
+
+  --border: #1f2a44;
+  --border-strong: #2b3854;
+
+  --brand-50: #16213e;
+  --brand-100: #1a2a4f;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+body { min-height: 100vh; }
+
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; }
+a { color: var(--brand-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img, svg { display: block; max-width: 100%; }
+input, textarea, select { outline: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   SPLASH SCREEN
+============================================================ */
+#splashScreen {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);
+  color: #fff;
+  transition: opacity .5s ease, visibility .5s;
+}
+#splashScreen.hide { opacity: 0; visibility: hidden; }
+.splash-logo {
+  width: 88px; height: 88px;
+  display: grid; place-items: center;
+  border-radius: 22px;
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(12px);
+  margin-bottom: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  animation: splashFloat 2s ease-in-out infinite;
+}
+.splash-logo svg { width: 48px; height: 48px; }
+.splash-title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+.splash-sub { font-size: 13px; opacity: .75; margin-top: 6px; letter-spacing: .08em; text-transform: uppercase; }
+.splash-loader {
+  margin-top: 32px; width: 200px; height: 4px; border-radius: 4px;
+  background: rgba(255,255,255,.2); overflow: hidden;
+}
+.splash-loader::after {
+  content: ''; display: block; height: 100%; width: 40%;
+  background: #fff; border-radius: 4px;
+  animation: splashLoad 1.3s ease-in-out infinite;
+}
+@keyframes splashLoad {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+@keyframes splashFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ============================================================
+   AUTH (LOGIN / REGISTER / FORGOT)
+============================================================ */
+.auth-wrap {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg);
+}
+.auth-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-800) 60%, #131c46);
+  color: #fff;
+  padding: 48px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  overflow: hidden;
+}
+.auth-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.12), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.08), transparent 45%);
+  pointer-events: none;
+}
+.auth-hero-logo {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+  position: relative; z-index: 1;
+}
+.auth-hero-logo .logo-mark {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: rgba(255,255,255,.16); display: grid; place-items: center;
+  backdrop-filter: blur(10px);
+}
+.auth-hero-content { position: relative; z-index: 1; max-width: 460px; }
+.auth-hero-content h1 {
+  font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -.03em;
+  margin-bottom: 16px;
+}
+.auth-hero-content p { font-size: 16px; opacity: .85; line-height: 1.6; }
+.auth-hero-features { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+.auth-hero-feature {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; opacity: .9;
+}
+.auth-hero-feature .check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255,255,255,.2); display: grid; place-items: center; flex-shrink: 0;
+}
+.auth-hero-footer { position: relative; z-index: 1; font-size: 12px; opacity: .6; }
+
+.auth-form-side {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 24px;
+  overflow-y: auto;
+}
+.auth-card { width: 100%; max-width: 420px; }
+.auth-card h2 {
+  font-size: 26px; font-weight: 700; letter-spacing: -.02em;
+  margin-bottom: 8px;
+}
+.auth-card .auth-sub { color: var(--text-soft); margin-bottom: 28px; font-size: 14px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 13px; font-weight: 500;
+  color: var(--text-soft); margin-bottom: 6px;
+}
+.form-control {
+  width: 100%; height: 44px;
+  padding: 0 14px;
+  background: var(--bg-elev);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  font-size: 14px;
+}
+.form-control:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 4px rgba(52,98,249,.1);
+}
+.form-control:disabled { opacity: .6; cursor: not-allowed; }
+textarea.form-control { height: auto; padding: 12px 14px; resize: vertical; min-height: 80px; }
+select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 18px;
+  border-radius: var(--radius); font-weight: 600; font-size: 14px;
+  transition: all var(--t-fast); white-space: nowrap;
+  border: 1.5px solid transparent;
+}
+.btn svg { width: 18px; height: 18px; }
+.btn-primary { background: var(--brand-500); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--brand-600); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(52,98,249,.3); }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.btn-secondary { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong); }
+.btn-ghost { background: transparent; color: var(--text-soft); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn-block { width: 100%; }
+.btn-sm { height: 34px; padding: 0 12px; font-size: 13px; }
+.btn-sm svg { width: 15px; height: 15px; }
+.btn-icon { width: 40px; height: 40px; padding: 0; border-radius: 10px; }
+.btn-icon.btn-sm { width: 34px; height: 34px; }
+
+.auth-links {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 20px; font-size: 13px; color: var(--text-soft);
+}
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-muted); font-size: 12px; margin: 20px 0;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Telegram verification block */
+.tg-verify-box {
+  background: var(--brand-50);
+  border: 1.5px dashed var(--brand-200);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+[data-theme="dark"] .tg-verify-box { background: var(--bg-soft); border-color: var(--brand-700); }
+.tg-verify-box h4 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--brand-700);
+  margin-bottom: 6px;
+}
+[data-theme="dark"] .tg-verify-box h4 { color: var(--brand-300); }
+.tg-verify-box p { font-size: 12px; color: var(--text-soft); margin-bottom: 12px; }
+.code-inputs { display: flex; gap: 8px; margin-top: 8px; }
+.code-inputs input {
+  width: 44px; height: 52px; text-align: center;
+  font-size: 20px; font-weight: 700;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-elev);
+  transition: all var(--t-fast);
+}
+.code-inputs input:focus { border-color: var(--brand-500); box-shadow: 0 0 0 4px rgba(52,98,249,.1); }
+
+.error-msg {
+  background: var(--danger-bg); color: #991b1b;
+  padding: 10px 14px; border-radius: var(--radius);
+  font-size: 13px; margin-bottom: 14px;
+  display: none; border-left: 3px solid var(--danger);
+}
+.error-msg.show { display: block; }
+.success-msg {
+  background: var(--success-bg); color: #065f46;
+  padding: 10px 14px; border-radius: var(--radius);
+  font-size: 13px; margin-bottom: 14px;
+  display: none; border-left: 3px solid var(--success);
+}
+.success-msg.show { display: block; }
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+#appShell { display: none; min-height: 100vh; }
+#appShell.active { display: block; }
+
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--topbar-h);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px;
+}
+.topbar-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 800; font-size: 16px; letter-spacing: -.02em;
+  color: var(--text); min-width: 200px;
+}
+.topbar-logo .logo-mark {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  display: grid; place-items: center; color: #fff;
+  box-shadow: 0 4px 12px rgba(52,98,249,.3);
+}
+.topbar-logo .logo-mark svg { width: 18px; height: 18px; }
+
+.topbar-search {
+  position: relative; flex: 1; max-width: 480px;
+}
+.topbar-search input {
+  width: 100%; height: 40px; padding: 0 14px 0 40px;
+  background: var(--bg); border: 1.5px solid transparent;
+  border-radius: 10px; font-size: 13px;
+  transition: all var(--t-fast);
+}
+.topbar-search input:focus { background: var(--bg-elev); border-color: var(--brand-500); box-shadow: 0 0 0 4px rgba(52,98,249,.08); }
+.topbar-search .search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none;
+}
+.topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.topbar-btn {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center; color: var(--text-soft);
+  transition: all var(--t-fast); position: relative;
+}
+.topbar-btn:hover { background: var(--bg-hover); color: var(--text); }
+.topbar-btn.active { background: var(--brand-50); color: var(--brand-600); }
+.topbar-btn .badge {
+  position: absolute; top: 8px; right: 8px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--danger); border: 2px solid var(--bg-elev);
+}
+.lang-switch {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg); border-radius: 10px; padding: 4px;
+}
+.lang-switch button {
+  padding: 6px 10px; border-radius: 7px; font-size: 12px;
+  font-weight: 600; color: var(--text-soft);
+  transition: all var(--t-fast);
+}
+.lang-switch button.active { background: var(--bg-elev); color: var(--text); box-shadow: var(--shadow-sm); }
+.topbar-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 10px 5px 5px; border-radius: 100px;
+  transition: background var(--t-fast); cursor: pointer;
+}
+.topbar-user:hover { background: var(--bg-hover); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-600));
+  color: #fff; display: grid; place-items: center;
+  font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.avatar.lg { width: 44px; height: 44px; font-size: 16px; }
+.topbar-user-info { display: flex; flex-direction: column; line-height: 1.2; }
+.topbar-user-info .name { font-size: 13px; font-weight: 600; }
+.topbar-user-info .role { font-size: 11px; color: var(--text-muted); }
+
+.hamburger { display: none; }
+
+/* Dropdown menus */
+.dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 220px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 6px;
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: all var(--t-fast); z-index: 200;
+}
+.dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text); cursor: pointer;
+  transition: background var(--t-fast);
+}
+.dropdown-item:hover { background: var(--bg-hover); }
+.dropdown-item svg { width: 16px; height: 16px; color: var(--text-muted); }
+.dropdown-item.danger { color: var(--danger); }
+.dropdown-item.danger svg { color: var(--danger); }
+.dropdown-sep { height: 1px; background: var(--border); margin: 6px 4px; }
+.dropdown-header { padding: 10px 12px; font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Global search results dropdown */
+.search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  max-height: 400px; overflow-y: auto; padding: 6px;
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: all var(--t-fast); z-index: 200;
+}
+.search-results.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.search-result-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+}
+.search-result-item:hover { background: var(--bg-hover); }
+.search-result-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: var(--brand-50); color: var(--brand-600);
+}
+.search-result-icon svg { width: 16px; height: 16px; }
+.search-result-info { flex: 1; min-width: 0; }
+.search-result-info .t { font-size: 13px; font-weight: 600; }
+.search-result-info .s { font-size: 12px; color: var(--text-muted); }
+
+/* ============================================================
+   SIDEBAR
+============================================================ */
+.sidebar {
+  position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 16px 12px;
+  transition: transform var(--t); z-index: 90;
+}
+.sidebar-section { margin-bottom: 18px; }
+.sidebar-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted);
+  padding: 8px 12px 6px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px; border-radius: 9px;
+  color: var(--text-soft); font-size: 13.5px; font-weight: 500;
+  cursor: pointer; transition: all var(--t-fast);
+  margin-bottom: 2px;
+}
+.sidebar-item:hover { background: var(--bg-hover); color: var(--text); }
+.sidebar-item.active {
+  background: linear-gradient(90deg, var(--brand-50), transparent);
+  color: var(--brand-600); font-weight: 600;
+}
+[data-theme="dark"] .sidebar-item.active { background: linear-gradient(90deg, rgba(52,98,249,.18), transparent); color: var(--brand-300); }
+.sidebar-item.active svg { color: var(--brand-600); }
+.sidebar-item svg { width: 17px; height: 17px; flex-shrink: 0; }
+.sidebar-item .count {
+  margin-left: auto; font-size: 11px; font-weight: 600;
+  background: var(--bg-hover); color: var(--text-muted);
+  padding: 2px 7px; border-radius: 100px;
+}
+
+/* ============================================================
+   MAIN CONTENT
+============================================================ */
+.main {
+  margin-left: var(--sidebar-w);
+  margin-top: var(--topbar-h);
+  padding: 24px;
+  min-height: calc(100vh - var(--topbar-h));
+}
+.page { display: none; animation: pageIn .35s ease; }
+.page.active { display: block; }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 22px; flex-wrap: wrap;
+}
+.page-header h1 {
+  font-size: 24px; font-weight: 700; letter-spacing: -.02em;
+  display: flex; align-items: center; gap: 10px;
+}
+.page-header p { color: var(--text-soft); font-size: 13.5px; margin-top: 4px; }
+.page-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ============================================================
+   CARDS / TABLES / FORMS
+============================================================ */
+.card {
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  transition: box-shadow var(--t-fast);
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.card-header h3 { font-size: 15px; font-weight: 700; }
+.card-header p { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+
+.data-table {
+  width: 100%; border-collapse: collapse; font-size: 13.5px;
+}
+.data-table thead th {
+  text-align: left; padding: 12px 14px;
+  background: var(--bg-soft); color: var(--text-soft);
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .03em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table thead th:first-child { border-top-left-radius: 10px; }
+.data-table thead th:last-child { border-top-right-radius: 10px; }
+.data-table tbody td {
+  padding: 13px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.data-table tbody tr { transition: background var(--t-fast); }
+.data-table tbody tr:hover { background: var(--bg-soft); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table .actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.table-wrap { overflow-x: auto; border-radius: var(--radius-lg); }
+
+.toolbar {
+  display: flex; gap: 10px; align-items: center;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.toolbar .search-inline {
+  position: relative; flex: 1; min-width: 200px; max-width: 340px;
+}
+.toolbar .search-inline input {
+  width: 100%; height: 40px; padding: 0 14px 0 38px;
+  background: var(--bg-elev); border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 13px;
+}
+.toolbar .search-inline input:focus { border-color: var(--brand-500); box-shadow: 0 0 0 4px rgba(52,98,249,.08); }
+.toolbar .search-inline svg {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.toolbar select {
+  height: 40px; padding: 0 34px 0 14px;
+  background: var(--bg-elev); border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 13px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+
+.badge-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 11.5px; font-weight: 600;
+}
+.badge-status::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+.badge-success { background: var(--success-bg); color: #047857; }
+.badge-warning { background: var(--warning-bg); color: #b45309; }
+.badge-danger { background: var(--danger-bg); color: #b91c1c; }
+.badge-info { background: var(--info-bg); color: #1d4ed8; }
+.badge-muted { background: var(--bg-hover); color: var(--text-muted); }
+
+.money { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 13px; }
+.money.positive { color: var(--success); }
+.money.negative { color: var(--danger); }
+
+/* Empty states */
+.empty-state {
+  text-align: center; padding: 60px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.empty-state .empty-icon {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: var(--brand-50); color: var(--brand-500);
+  display: grid; place-items: center;
+}
+[data-theme="dark"] .empty-state .empty-icon { background: var(--brand-100); }
+.empty-state .empty-icon svg { width: 32px; height: 32px; }
+.empty-state h3 { font-size: 17px; font-weight: 700; }
+.empty-state p { color: var(--text-soft); font-size: 13.5px; max-width: 340px; }
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-soft) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: skeletonLoad 1.4s ease infinite;
+  border-radius: 6px;
+}
+@keyframes skeletonLoad {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-row { height: 40px; margin-bottom: 8px; }
+.skeleton-card { height: 110px; }
+
+/* ============================================================
+   MODAL
+============================================================ */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15,23,42,.5);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; opacity: 0; visibility: hidden;
+  transition: opacity var(--t), visibility var(--t);
+}
+.modal-backdrop.open { opacity: 1; visibility: visible; }
+.modal {
+  background: var(--bg-elev); border-radius: var(--radius-xl);
+  width: 100%; max-width: 560px; max-height: 90vh;
+  overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  transform: scale(.96) translateY(8px);
+  transition: transform var(--t);
+}
+.modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+.modal.modal-lg { max-width: 780px; }
+.modal.modal-sm { max-width: 420px; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { font-size: 17px; font-weight: 700; }
+.modal-header p { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+.modal-close {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: grid; place-items: center; color: var(--text-muted);
+  transition: all var(--t-fast);
+}
+.modal-close:hover { background: var(--bg-hover); color: var(--text); }
+
+/* ============================================================
+   TOASTS
+============================================================ */
+#toastContainer {
+  position: fixed; top: 80px; right: 20px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px;
+}
+.toast {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--bg-elev); border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  animation: toastIn .3s cubic-bezier(.4,0,.2,1);
+  border-left: 4px solid var(--info);
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+.toast.info { border-left-color: var(--info); }
+.toast-icon {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+  color: #fff; font-size: 12px;
+}
+.toast.success .toast-icon { background: var(--success); }
+.toast.error .toast-icon { background: var(--danger); }
+.toast.warning .toast-icon { background: var(--warning); }
+.toast.info .toast-icon { background: var(--info); }
+.toast-content { flex: 1; min-width: 0; }
+.toast-content .toast-title { font-size: 13.5px; font-weight: 600; }
+.toast-content .toast-msg { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; }
+.toast-close {
+  color: var(--text-muted); padding: 2px;
+  border-radius: 4px; transition: background var(--t-fast);
+}
+.toast-close:hover { background: var(--bg-hover); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast.hide { animation: toastOut .3s ease forwards; }
+@keyframes toastOut {
+  to { opacity: 0; transform: translateX(40px); }
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+.sidebar-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,.5);
+  z-index: 89; opacity: 0; visibility: hidden;
+  transition: opacity var(--t), visibility var(--t);
+}
+.sidebar-overlay.show { opacity: 1; visibility: visible; }
+
+@media (max-width: 1100px) {
+  .topbar-logo { min-width: auto; }
+  .topbar-logo .logo-text { display: none; }
+  .auth-wrap { grid-template-columns: 1fr; }
+  .auth-hero { display: none; }
+}
+
+@media (max-width: 900px) {
+  :root { --sidebar-w: 260px; }
+  .hamburger { display: grid; }
+  .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-xl); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; padding: 18px; }
+  .topbar-search { max-width: none; }
+}
+
+@media (max-width: 640px) {
+  :root { --topbar-h: 58px; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar-user-info { display: none; }
+  .lang-switch button { padding: 5px 7px; font-size: 11px; }
+  .main { padding: 14px; }
+  .page-header h1 { font-size: 20px; }
+  .card { padding: 16px; border-radius: var(--radius); }
+  .modal { border-radius: var(--radius-lg); }
+  .modal-body { padding: 18px; }
+  .modal-header, .modal-footer { padding: 14px 18px; }
+  .data-table { font-size: 12.5px; }
+  .data-table thead th, .data-table tbody td { padding: 10px 10px; }
+  #toastContainer { top: 70px; right: 10px; left: 10px; max-width: none; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--text-muted); }
+.text-soft { color: var(--text-soft); }
+.mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 16px; } .mt-4 { margin-top: 24px; }
+.mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 16px; } .mb-4 { margin-bottom: 24px; }
+.flex { display: flex; } .flex-col { flex-direction: column; } .items-center { align-items: center; }
+.justify-between { justify-content: space-between; } .gap-2 { gap: 8px; } .gap-3 { gap: 16px; }
+.flex-wrap { flex-wrap: wrap; }
+
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Grid helpers */
+.grid { display: grid; gap: 16px; }
+.grid-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.grid-stats { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SPLASH SCREEN
+============================================================ -->
+<div id="splashScreen">
+  <div class="splash-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3v18h18"/>
+      <path d="M7 14l4-4 4 4 6-6"/>
+    </svg>
+  </div>
+  <div class="splash-title">BuhSoft</div>
+  <div class="splash-sub">Учёт всего в одном месте</div>
+  <div class="splash-loader"></div>
+</div>
+
+<!-- ============================================================
+     AUTH
+============================================================ -->
+<div id="authRoot" class="auth-wrap">
+  <div class="auth-hero">
+    <div class="auth-hero-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+        </svg>
+      </div>
+      BuhSoft
+    </div>
+    <div class="auth-hero-content">
+      <h1 data-i18n="heroTitle">Современный учёт для вашего бизнеса</h1>
+      <p data-i18n="heroSubtitle">Продажи, покупки, касса, банк, отчёты и аналитика — всё в одном месте. Работает быстро, удобно и безопасно.</p>
+      <div class="auth-hero-features">
+        <div class="auth-hero-feature">
+          <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+          <span data-i18n="feat1">Полный бухгалтерский учёт</span>
+        </div>
+        <div class="auth-hero-feature">
+          <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+          <span data-i18n="feat2">Регистрация через Telegram</span>
+        </div>
+        <div class="auth-hero-feature">
+          <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+          <span data-i18n="feat3">3 языка и 3 валюты</span>
+        </div>
+        <div class="auth-hero-feature">
+          <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+          <span data-i18n="feat4">Безопасность уровня Enterprise</span>
+        </div>
+      </div>
+    </div>
+    <div class="auth-hero-footer">© 2025 BuhSoft · v1.0.0</div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <!-- LOGIN PAGE -->
+      <section id="loginPage">
+        <h2 data-i18n="loginTitle">Вход в систему</h2>
+        <p class="auth-sub" data-i18n="loginSubtitle">Введите логин и пароль, чтобы продолжить</p>
+
+        <div id="loginError" class="error-msg"></div>
+
+        <form id="loginForm" autocomplete="on">
+          <div class="form-group">
+            <label for="loginIdentifier" data-i18n="loginIdentifier">Логин или Email</label>
+            <input id="loginIdentifier" type="text" class="form-control" required autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword" data-i18n="password">Пароль</label>
+            <input id="loginPassword" type="password" class="form-control" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+            <span data-i18n="loginBtn">Войти</span>
+          </button>
+        </form>
+
+        <div class="auth-links">
+          <span data-i18n="noAccount">Нет аккаунта?</span>
+          <a href="#" id="goRegister" data-i18n="register">Регистрация</a>
+        </div>
+        <div class="auth-links">
+          <a href="#" id="goForgot" data-i18n="forgotPassword">Забыли пароль?</a>
+        </div>
+
+        <div class="auth-divider"><span data-i18n="or">или</span></div>
+        <button type="button" class="btn btn-secondary btn-block" id="demoModeBtn">
+          <span data-i18n="demoMode">Демо-режим (без Firebase)</span>
+        </button>
+      </section>
+
+      <!-- REGISTER PAGE -->
+      <section id="registerPage" class="hidden">
+        <h2 data-i18n="registerTitle">Создать аккаунт</h2>
+        <p class="auth-sub" data-i18n="registerSubtitle">Зарегистрируйтесь через Telegram-верификацию</p>
+
+        <div id="registerError" class="error-msg"></div>
+        <div id="registerSuccess" class="success-msg"></div>
+
+        <form id="registerForm" autocomplete="off">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="regFirstName" data-i18n="firstName">Имя</label>
+              <input id="regFirstName" type="text" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="regLastName" data-i18n="lastName">Фамилия</label>
+              <input id="regLastName" type="text" class="form-control" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="regLogin" data-i18n="login">Логин</label>
+            <input id="regLogin" type="text" class="form-control" required pattern="[A-Za-z0-9_]{3,32}" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="regPassword" data-i18n="password">Пароль</label>
+              <input id="regPassword" type="password" class="form-control" required minlength="6" />
+            </div>
+            <div class="form-group">
+              <label for="regPassword2" data-i18n="confirmPassword">Повтор пароля</label>
+              <input id="regPassword2" type="password" class="form-control" required minlength="6" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="regTelegram" data-i18n="telegramId">Telegram ID или @username</label>
+            <input id="regTelegram" type="text" class="form-control" placeholder="@username или 123456789" required />
+          </div>
+
+          <div class="tg-verify-box">
+            <h4>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <span data-i18n="tgVerification">Telegram-верификация</span>
+            </h4>
+            <p data-i18n="tgVerificationHint">Нажмите «Получить код» — бот отправит 6-значный код в Telegram. Введите его ниже.</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="getCodeBtn">
+              <span data-i18n="getCode">Получить код</span>
+            </button>
+            <div class="code-inputs hidden" id="codeInputs">
+              <input type="text" maxlength="1" inputmode="numeric" />
+              <input type="text" maxlength="1" inputmode="numeric" />
+              <input type="text" maxlength="1" inputmode="numeric" />
+              <input type="text" maxlength="1" inputmode="numeric" />
+              <input type="text" maxlength="1" inputmode="numeric" />
+              <input type="text" maxlength="1" inputmode="numeric" />
+            </div>
+            <div id="codeStatus" class="text-muted mt-2" style="font-size:12px;"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="registerBtn" disabled>
+            <span data-i18n="registerBtn">Зарегистрироваться</span>
+          </button>
+        </form>
+
+        <div class="auth-links">
+          <span data-i18n="haveAccount">Уже есть аккаунт?</span>
+          <a href="#" id="goLogin" data-i18n="loginBtn">Войти</a>
+        </div>
+      </section>
+
+      <!-- FORGOT PAGE -->
+      <section id="forgotPage" class="hidden">
+        <h2 data-i18n="forgotTitle">Восстановление пароля</h2>
+        <p class="auth-sub" data-i18n="forgotSubtitle">Введите email, и мы отправим ссылку для сброса пароля</p>
+        <div id="forgotError" class="error-msg"></div>
+        <div id="forgotSuccess" class="success-msg"></div>
+        <form id="forgotForm">
+          <div class="form-group">
+            <label for="forgotEmail" data-i18n="email">Email</label>
+            <input id="forgotEmail" type="email" class="form-control" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" data-i18n="sendResetLink">Отправить ссылку</button>
+        </form>
+        <div class="auth-links">
+          <a href="#" id="goLogin2" data-i18n="backToLogin">← Назад ко входу</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL
+============================================================ -->
+<div id="appShell">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="topbar-btn hamburger" id="hamburgerBtn" aria-label="Меню">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+
+    <div class="topbar-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+        </svg>
+      </div>
+      <span class="logo-text">BuhSoft</span>
+    </div>
+
+    <div class="topbar-search" id="globalSearchWrap">
+      <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="globalSearch" data-i18n-placeholder="searchPlaceholder" placeholder="Поиск товаров, клиентов, документов..." />
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="lang-switch" id="langSwitch">
+        <button data-lang="ru" class="active">RU</button>
+        <button data-lang="en">EN</button>
+        <button data-lang="zh">中文</button>
+      </div>
+
+      <div style="position:relative;">
+        <button class="topbar-btn" id="notifBtn" aria-label="Уведомления">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="badge hidden" id="notifBadge"></span>
+        </button>
+        <div class="dropdown" id="notifDropdown">
+          <div class="dropdown-header" data-i18n="notifications">Уведомления</div>
+          <div id="notifList"></div>
+        </div>
+      </div>
+
+      <div style="position:relative;">
+        <div class="topbar-user" id="userMenuBtn">
+          <div class="avatar" id="userAvatar">U</div>
+          <div class="topbar-user-info">
+            <span class="name" id="userName">—</span>
+            <span class="role" id="userRole">user</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="dropdown" id="userDropdown">
+          <div class="dropdown-item" data-nav="profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span data-i18n="profile">Профиль</span>
+          </div>
+          <div class="dropdown-item" data-nav="settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            <span data-i18n="settings">Настройки</span>
+          </div>
+          <div class="dropdown-sep"></div>
+          <div class="dropdown-item danger" id="logoutBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span data-i18n="logout">Выйти</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <main class="main" id="mainContent"></main>
+</div>
+
+<!-- MODAL ROOT -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" id="modalRoot">
+    <div class="modal-header">
+      <div>
+        <h3 id="modalTitle">—</h3>
+        <p id="modalSubtitle"></p>
+      </div>
+      <button class="modal-close" id="modalClose">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="toastContainer"></div>
+
+<!-- ============================================================
+     FIREBASE SDK (compat для простоты)
+============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<script>
+/* ============================================================
+   CONFIG
+============================================================ */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const APP_VERSION = '1.0.0';
+const USE_FIREBASE = !firebaseConfig.apiKey.startsWith('YOUR_');
+const DEFAULT_CURRENCY = 'TJS';
+const CURRENCIES = {
+  TJS: { code:'TJS', symbol:'SM', name:'Tajikistani Somoni', position:'after' },
+  RUB: { code:'RUB', symbol:'₽', name:'Russian Ruble', position:'after' },
+  USD: { code:'USD', symbol:'$', name:'US Dollar', position:'before' }
+};
+
+/* ============================================================
+   STATE
+============================================================ */
+const state = {
+  user: null,
+  profile: null,
+  isAdmin: false,
+  demo: false,
+  lang: localStorage.getItem('buh.lang') || 'ru',
+  currency: localStorage.getItem('buh.currency') || DEFAULT_CURRENCY,
+  theme: localStorage.getItem('buh.theme') || 'light',
+  nav: 'dashboard',
+  data: {
+    products: [],
+    customers: [],
+    suppliers: [],
+    sales: [],
+    purchases: [],
+    income: [],
+    expenses: [],
+    cash: [],
+    bank: [],
+    documents: [],
+    notifications: [],
+    users: [],
+    categories: [],
+    audit: [],
+    exchangeRates: {},
+    settings: {}
+  },
+  charts: {},
+  listeners: []
+};
+
+/* ============================================================
+   I18N — TRANSLATIONS
+============================================================ */
+const translations = {
+  ru: {
+    /* Splash */
+    appName: 'BuhSoft',
+    appTagline: 'Учёт всего в одном месте',
+    /* Hero */
+    heroTitle: 'Современный учёт для вашего бизнеса',
+    heroSubtitle: 'Продажи, покупки, касса, банк, отчёты и аналитика — всё в одном месте.',
+    feat1: 'Полный бухгалтерский учёт',
+    feat2: 'Регистрация через Telegram',
+    feat3: '3 языка и 3 валюты',
+    feat4: 'Безопасность уровня Enterprise',
+    /* Auth */
+    loginTitle: 'Вход в систему',
+    loginSubtitle: 'Введите логин и пароль, чтобы продолжить',
+    loginIdentifier: 'Логин или Email',
+    login: 'Логин',
+    password: 'Пароль',
+    confirmPassword: 'Повтор пароля',
+    loginBtn: 'Войти',
+    register: 'Регистрация',
+    registerTitle: 'Создать аккаунт',
+    registerSubtitle: 'Зарегистрируйтесь через Telegram-верификацию',
+    registerBtn: 'Зарегистрироваться',
+    firstName: 'Имя',
+    lastName: 'Фамилия',
+    telegramId: 'Telegram ID или @username',
+    tgVerification: 'Telegram-верификация',
+    tgVerificationHint: 'Нажмите «Получить код» — бот отправит 6-значный код. Введите его ниже.',
+    getCode: 'Получить код',
+    codeSent: 'Код отправлен. Проверьте Telegram.',
+    codeWrong: 'Неверный код',
+    codeExpired: 'Срок действия кода истёк',
+    forgotTitle: 'Восстановление пароля',
+    forgotSubtitle: 'Введите email, и мы отправим ссылку для сброса пароля',
+    sendResetLink: 'Отправить ссылку',
+    email: 'Email',
+    noAccount: 'Нет аккаунта?',
+    haveAccount: 'Уже есть аккаунт?',
+    forgotPassword: 'Забыли пароль?',
+    backToLogin: '← Назад ко входу',
+    or: 'или',
+    demoMode: 'Демо-режим (без Firebase)',
+    /* Nav */
+    navMain: 'Главная',
+    navAccounting: 'Бухгалтерия',
+    navReports: 'Отчёты',
+    navSettings: 'Настройки',
+    navAdmin: 'Админ',
+    dashboard: 'Дашборд',
+    sales: 'Продажи',
+    purchases: 'Покупки',
+    income: 'Доходы',
+    expenses: 'Расходы',
+    cash: 'Касса',
+    bank: 'Банк',
+    products: 'Товары',
+    counterparties: 'Контрагенты',
+    documents: 'Документы',
+    reports: 'Отчёты',
+    finance: 'Финансы',
+    incomeExpense: 'Доходы и расходы',
+    stock: 'Остатки',
+    cashFlow: 'Движение денег',
+    company: 'Компания',
+    profile: 'Профиль',
+    currency: 'Валюта',
+    language: 'Язык',
+    notifications: 'Уведомления',
+    adminPanel: 'Админ-панель',
+    logout: 'Выйти',
+    /* Topbar */
+    searchPlaceholder: 'Поиск товаров, клиентов, документов...',
+    /* Dashboard */
+    balance: 'Баланс',
+    totalIncome: 'Доходы',
+    totalExpenses: 'Расходы',
+    profit: 'Прибыль',
+    receivable: 'Дебиторская задолженность',
+    payable: 'Кредиторская задолженность',
+    today: 'Сегодня',
+    week: 'Неделя',
+    month: 'Месяц',
+    quarter: 'Квартал',
+    year: 'Год',
+    custom: 'Период',
+    incomeChart: 'Доходы',
+    expenseChart: 'Расходы',
+    profitChart: 'Прибыль',
+    salesChart: 'Продажи',
+    /* Common */
+    add: 'Добавить',
+    edit: 'Редактировать',
+    delete: 'Удалить',
+    save: 'Сохранить',
+    cancel: 'Отмена',
+    close: 'Закрыть',
+    confirm: 'Подтвердить',
+    search: 'Поиск',
+    filter: 'Фильтр',
+    export: 'Экспорт',
+    actions: 'Действия',
+    status: 'Статус',
+    date: 'Дата',
+    sum: 'Сумма',
+    name: 'Название',
+    description: 'Описание',
+    category: 'Категория',
+    quantity: 'Количество',
+    price: 'Цена',
+    unit: 'Ед. изм.',
+    createdAt: 'Создано',
+    updatedAt: 'Обновлено',
+    id: 'ID',
+    active: 'Активен',
+    inactive: 'Неактивен',
+    /* Products */
+    addProduct: 'Добавить товар',
+    newProduct: 'Новый товар',
+    editProduct: 'Редактировать товар',
+    productName: 'Название товара',
+    noProducts: 'Пока нет товаров',
+    noProductsHint: 'Добавьте первый товар или услугу, чтобы начать учёт',
+    /* Customers */
+    addCustomer: 'Добавить контрагента',
+    newCustomer: 'Новый контрагент',
+    customerType: 'Тип',
+    clientType: 'Клиент',
+    supplierType: 'Поставщик',
+    otherType: 'Другой',
+    contactPerson: 'Контактное лицо',
+    phone: 'Телефон',
+    address: 'Адрес',
+    telegram: 'Telegram',
+    note: 'Заметка',
+    noCustomers: 'Пока нет контрагентов',
+    /* Sales */
+    newSale: 'Новая продажа',
+    editSale: 'Редактировать продажу',
+    docNumber: 'Номер документа',
+    client: 'Клиент',
+    subtotal: 'Подытог',
+    discount: 'Скидка',
+    total: 'Итог',
+    paymentMethod: 'Способ оплаты',
+    cashPayment: 'Наличные',
+    cardPayment: 'Карта',
+    transferPayment: 'Перевод',
+    statusDraft: 'Черновик',
+    statusPaid: 'Оплачен',
+    statusPartial: 'Частично',
+    statusCancelled: 'Отменён',
+    noSales: 'Пока нет продаж',
+    addItem: 'Добавить позицию',
+    /* Purchases */
+    newPurchase: 'Новая покупка',
+    supplier: 'Поставщик',
+    noPurchases: 'Пока нет покупок',
+    /* Income/Expenses */
+    newIncome: 'Новый доход',
+    newExpense: 'Новый расход',
+    noIncome: 'Пока нет доходов',
+    noExpenses: 'Пока нет расходов',
+    /* Cash/Bank */
+    cashIn: 'Приход',
+    cashOut: 'Расход',
+    balanceCash: 'Остаток в кассе',
+    transfer: 'Перевод',
+    noCash: 'Нет операций по кассе',
+    noBank: 'Нет операций по банку',
+    /* Documents */
+    docType: 'Тип документа',
+    invoice: 'Счёт',
+    payment: 'Платёж',
+    author: 'Автор',
+    noDocuments: 'Пока нет документов',
+    /* Admin */
+    adminUsers: 'Пользователи',
+    adminDatabase: 'База данных',
+    adminTelegram: 'Telegram-бот',
+    adminCurrency: 'Валюты и курсы',
+    adminAudit: 'Журнал аудита',
+    botUsername: 'Имя бота',
+    botToken: 'Токен бота',
+    botEnabled: 'Верификация включена',
+    codeLifetime: 'Срок действия кода (сек)',
+    maxAttempts: 'Макс. попыток',
+    testBot: 'Проверить бота',
+    statusConnected: 'CONNECTED',
+    statusDisconnected: 'DISCONNECTED',
+    statusError: 'ERROR',
+    role: 'Роль',
+    block: 'Заблокировать',
+    unblock: 'Разблокировать',
+    changeRole: 'Изменить роль',
+    /* Toasts */
+    saved: 'Сохранено',
+    deleted: 'Удалено',
+    errorGeneric: 'Произошла ошибка',
+    confirmDelete: 'Удалить запись? Это действие нельзя отменить.',
+    /* Demo */
+    demoBanner: 'Демо-режим. Данные не сохраняются.',
+  },
+  en: {
+    appName: 'BuhSoft',
+    appTagline: 'All-in-one accounting',
+    heroTitle: 'Modern accounting for your business',
+    heroSubtitle: 'Sales, purchases, cash, bank, reports and analytics — all in one place.',
+    feat1: 'Complete accounting',
+    feat2: 'Telegram verification',
+    feat3: '3 languages & 3 currencies',
+    feat4: 'Enterprise-grade security',
+    loginTitle: 'Sign in',
+    loginSubtitle: 'Enter your login and password to continue',
+    loginIdentifier: 'Login or Email',
+    login: 'Login',
+    password: 'Password',
+    confirmPassword: 'Confirm Password',
+    loginBtn: 'Sign in',
+    register: 'Sign up',
+    registerTitle: 'Create account',
+    registerSubtitle: 'Register via Telegram verification',
+    registerBtn: 'Register',
+    firstName: 'First name',
+    lastName: 'Last name',
+    telegramId: 'Telegram ID or @username',
+    tgVerification: 'Telegram verification',
+    tgVerificationHint: 'Click "Get code" — bot will send a 6-digit code to Telegram.',
+    getCode: 'Get code',
+    codeSent: 'Code sent. Check Telegram.',
+    codeWrong: 'Invalid code',
+    codeExpired: 'Code expired',
+    forgotTitle: 'Password recovery',
+    forgotSubtitle: 'Enter your email and we will send a reset link',
+    sendResetLink: 'Send reset link',
+    email: 'Email',
+    noAccount: 'No account?',
+    haveAccount: 'Already have an account?',
+    forgotPassword: 'Forgot password?',
+    backToLogin: '← Back to login',
+    or: 'or',
+    demoMode: 'Demo mode (without Firebase)',
+    navMain: 'Main',
+    navAccounting: 'Accounting',
+    navReports: 'Reports',
+    navSettings: 'Settings',
+    navAdmin: 'Admin',
+    dashboard: 'Dashboard',
+    sales: 'Sales',
+    purchases: 'Purchases',
+    income: 'Income',
+    expenses: 'Expenses',
+    cash: 'Cash',
+    bank: 'Bank',
+    products: 'Products',
+    counterparties: 'Counterparties',
+    documents: 'Documents',
+    reports: 'Reports',
+    finance: 'Finance',
+    incomeExpense: 'Income & Expenses',
+    stock: 'Stock',
+    cashFlow: 'Cash Flow',
+    company: 'Company',
+    profile: 'Profile',
+    currency: 'Currency',
+    language: 'Language',
+    notifications: 'Notifications',
+    adminPanel: 'Admin Panel',
+    logout: 'Logout',
+    searchPlaceholder: 'Search products, clients, documents...',
+    balance: 'Balance',
+    totalIncome: 'Income',
+    totalExpenses: 'Expenses',
+    profit: 'Profit',
+    receivable: 'Accounts receivable',
+    payable: 'Accounts payable',
+    today: 'Today',
+    week: 'Week',
+    month: 'Month',
+    quarter: 'Quarter',
+    year: 'Year',
+    custom: 'Custom',
+    incomeChart: 'Income',
+    expenseChart: 'Expenses',
+    profitChart: 'Profit',
+    salesChart: 'Sales',
+    add: 'Add',
+    edit: 'Edit',
+    delete: 'Delete',
+    save: 'Save',
+    cancel: 'Cancel',
+    close: 'Close',
+    confirm: 'Confirm',
+    search: 'Search',
+    filter: 'Filter',
+    export: 'Export',
+    actions: 'Actions',
+    status: 'Status',
+    date: 'Date',
+    sum: 'Amount',
+    name: 'Name',
+    description: 'Description',
+    category: 'Category',
+    quantity: 'Quantity',
+    price: 'Price',
+    unit: 'Unit',
+    createdAt: 'Created',
+    updatedAt: 'Updated',
+    id: 'ID',
+    active: 'Active',
+    inactive: 'Inactive',
+    addProduct: 'Add product',
+    newProduct: 'New product',
+    editProduct: 'Edit product',
+    productName: 'Product name',
+    noProducts: 'No products yet',
+    noProductsHint: 'Add your first product or service to start',
+    addCustomer: 'Add counterparty',
+    newCustomer: 'New counterparty',
+    customerType: 'Type',
+    clientType: 'Client',
+    supplierType: 'Supplier',
+    otherType: 'Other',
+    contactPerson: 'Contact person',
+    phone: 'Phone',
+    address: 'Address',
+    telegram: 'Telegram',
+    note: 'Note',
+    noCustomers: 'No counterparties yet',
+    newSale: 'New sale',
+    editSale: 'Edit sale',
+    docNumber: 'Document number',
+    client: 'Client',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    total: 'Total',
+    paymentMethod: 'Payment method',
+    cashPayment: 'Cash',
+    cardPayment: 'Card',
+    transferPayment: 'Transfer',
+    statusDraft: 'Draft',
+    statusPaid: 'Paid',
+    statusPartial: 'Partial',
+    statusCancelled: 'Cancelled',
+    noSales: 'No sales yet',
+    addItem: 'Add item',
+    newPurchase: 'New purchase',
+    supplier: 'Supplier',
+    noPurchases: 'No purchases yet',
+    newIncome: 'New income',
+    newExpense: 'New expense',
+    noIncome: 'No income yet',
+    noExpenses: 'No expenses yet',
+    cashIn: 'Cash in',
+    cashOut: 'Cash out',
+    balanceCash: 'Cash balance',
+    transfer: 'Transfer',
+    noCash: 'No cash transactions',
+    noBank: 'No bank transactions',
+    docType: 'Document type',
+    invoice: 'Invoice',
+    payment: 'Payment',
+    author: 'Author',
+    noDocuments: 'No documents yet',
+    adminUsers: 'Users',
+    adminDatabase: 'Database',
+    adminTelegram: 'Telegram Bot',
+    adminCurrency: 'Currencies & Rates',
+    adminAudit: 'Audit Log',
+    botUsername: 'Bot username',
+    botToken: 'Bot token',
+    botEnabled: 'Verification enabled',
+    codeLifetime: 'Code lifetime (sec)',
+    maxAttempts: 'Max attempts',
+    testBot: 'Test bot',
+    statusConnected: 'CONNECTED',
+    statusDisconnected: 'DISCONNECTED',
+    statusError: 'ERROR',
+    role: 'Role',
+    block: 'Block',
+    unblock: 'Unblock',
+    changeRole: 'Change role',
+    saved: 'Saved',
+    deleted: 'Deleted',
+    errorGeneric: 'An error occurred',
+    confirmDelete: 'Delete this record? This action cannot be undone.',
+    demoBanner: 'Demo mode. Data is not saved.',
+  },
+  zh: {
+    appName: 'BuhSoft',
+    appTagline: '一站式会计',
+    heroTitle: '为您的企业提供现代化会计',
+    heroSubtitle: '销售、采购、现金、银行、报表和分析——尽在一处。',
+    feat1: '完整会计功能',
+    feat2: 'Telegram 验证',
+    feat3: '3 种语言和 3 种货币',
+    feat4: '企业级安全',
+    loginTitle: '登录',
+    loginSubtitle: '输入登录名和密码以继续',
+    loginIdentifier: '登录名或邮箱',
+    login: '登录名',
+    password: '密码',
+    confirmPassword: '确认密码',
+    loginBtn: '登录',
+    register: '注册',
+    registerTitle: '创建账户',
+    registerSubtitle: '通过 Telegram 验证注册',
+    registerBtn: '注册',
+    firstName: '名字',
+    lastName: '姓氏',
+    telegramId: 'Telegram ID 或 @用户名',
+    tgVerification: 'Telegram 验证',
+    tgVerificationHint: '点击"获取验证码"——机器人将发送 6 位验证码到 Telegram。',
+    getCode: '获取验证码',
+    codeSent: '验证码已发送，请检查 Telegram。',
+    codeWrong: '验证码错误',
+    codeExpired: '验证码已过期',
+    forgotTitle: '找回密码',
+    forgotSubtitle: '输入邮箱，我们将发送重置链接',
+    sendResetLink: '发送重置链接',
+    email: '邮箱',
+    noAccount: '还没有账户？',
+    haveAccount: '已有账户？',
+    forgotPassword: '忘记密码？',
+    backToLogin: '← 返回登录',
+    or: '或',
+    demoMode: '演示模式（无 Firebase）',
+    navMain: '主页',
+    navAccounting: '会计',
+    navReports: '报表',
+    navSettings: '设置',
+    navAdmin: '管理员',
+    dashboard: '仪表盘',
+    sales: '销售',
+    purchases: '采购',
+    income: '收入',
+    expenses: '支出',
+    cash: '现金',
+    bank: '银行',
+    products: '商品',
+    counterparties: '交易对手',
+    documents: '文档',
+    reports: '报表',
+    finance: '财务',
+    incomeExpense: '收支',
+    stock: '库存',
+    cashFlow: '现金流',
+    company: '公司',
+    profile: '个人资料',
+    currency: '货币',
+    language: '语言',
+    notifications: '通知',
+    adminPanel: '管理面板',
+    logout: '退出',
+    searchPlaceholder: '搜索商品、客户、文档...',
+    balance: '余额',
+    totalIncome: '收入',
+    totalExpenses: '支出',
+    profit: '利润',
+    receivable: '应收账款',
+    payable: '应付账款',
+    today: '今天',
+    week: '本周',
+    month: '本月',
+    quarter: '本季度',
+    year: '本年',
+    custom: '自定义',
+    incomeChart: '收入',
+    expenseChart: '支出',
+    profitChart: '利润',
+    salesChart: '销售',
+    add: '添加',
+    edit: '编辑',
+    delete: '删除',
+    save: '保存',
+    cancel: '取消',
+    close: '关闭',
+    confirm: '确认',
+    search: '搜索',
+    filter: '筛选',
+    export: '导出',
+    actions: '操作',
+    status: '状态',
+    date: '日期',
+    sum: '金额',
+    name: '名称',
+    description: '描述',
+    category: '分类',
+    quantity: '数量',
+    price: '价格',
+    unit: '单位',
+    createdAt: '创建时间',
+    updatedAt: '更新时间',
+    id: 'ID',
+    active: '启用',
+    inactive: '停用',
+    addProduct: '添加商品',
+    newProduct: '新商品',
+    editProduct: '编辑商品',
+    productName: '商品名称',
+    noProducts: '暂无商品',
+    noProductsHint: '添加您的第一个商品或服务以开始',
+    addCustomer: '添加交易对手',
+    newCustomer: '新交易对手',
+    customerType: '类型',
+    clientType: '客户',
+    supplierType: '供应商',
+    otherType: '其他',
+    contactPerson: '联系人',
+    phone: '电话',
+    address: '地址',
+    telegram: 'Telegram',
+    note: '备注',
+    noCustomers: '暂无交易对手',
+    newSale: '新销售',
+    editSale: '编辑销售',
+    docNumber: '文档编号',
+    client: '客户',
+    subtotal: '小计',
+    discount: '折扣',
+    total: '合计',
+    paymentMethod: '支付方式',
+    cashPayment: '现金',
+    cardPayment: '银行卡',
+    transferPayment: '转账',
+    statusDraft: '草稿',
+    statusPaid: '已支付',
+    statusPartial: '部分支付',
+    statusCancelled: '已取消',
+    noSales: '暂无销售',
+    addItem: '添加项目',
+    newPurchase: '新采购',
+    supplier: '供应商',
+    noPurchases: '暂无采购',
+    newIncome: '新收入',
+    newExpense: '新支出',
+    noIncome: '暂无收入',
+    noExpenses: '暂无支出',
+    cashIn: '收入',
+    cashOut: '支出',
+    balanceCash: '现金余额',
+    transfer: '转账',
+    noCash: '无现金交易',
+    noBank: '无银行交易',
+    docType: '文档类型',
+    invoice: '发票',
+    payment: '付款',
+    author: '作者',
+    noDocuments: '暂无文档',
+    adminUsers: '用户',
+    adminDatabase: '数据库',
+    adminTelegram: 'Telegram 机器人',
+    adminCurrency: '货币与汇率',
+    adminAudit: '审计日志',
+    botUsername: '机器人用户名',
+    botToken: '机器人令牌',
+    botEnabled: '启用验证',
+    codeLifetime: '验证码有效期（秒）',
+    maxAttempts: '最大尝试次数',
+    testBot: '测试机器人',
+    statusConnected: '已连接',
+    statusDisconnected: '未连接',
+    statusError: '错误',
+    role: '角色',
+    block: '封禁',
+    unblock: '解封',
+    changeRole: '更改角色',
+    saved: '已保存',
+    deleted: '已删除',
+    errorGeneric: '发生错误',
+    confirmDelete: '删除此记录？此操作无法撤销。',
+    demoBanner: '演示模式。数据不会保存。',
+  }
+};
+
+function t(key) {
+  return (translations[state.lang] && translations[state.lang][key]) || translations.ru[key] || key;
+}
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k === 'text') node.textContent = v;
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v === true) node.setAttribute(k, '');
+    else if (v !== false && v != null) node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c == null) continue;
+    node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s]));
+}
+
+function uid(prefix = 'id') {
+  return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function fmtMoney(amount, currency = state.currency) {
+  const c = CURRENCIES[currency] || CURRENCIES.TJS;
+  const num = Number(amount || 0);
+  const formatted = num.toLocaleString(state.lang === 'zh' ? 'zh-CN' : state.lang, {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+  return c.position === 'before' ? `${c.symbol} ${formatted}` : `${formatted} ${c.symbol}`;
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const date = d.toDate ? d.toDate() : (typeof d === 'string' || typeof d === 'number' ? new Date(d) : d);
+  return date.toLocaleDateString(state.lang === 'zh' ? 'zh-CN' : state.lang, {
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  });
+}
+
+function fmtDateTime(d) {
+  if (!d) return '—';
+  const date = d.toDate ? d.toDate() : (typeof d === 'string' || typeof d === 'number' ? new Date(d) : d);
+  return date.toLocaleString(state.lang === 'zh' ? 'zh-CN' : state.lang, {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function debounce(fn, ms = 250) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+/* ============================================================
+   FIREBASE INIT
+============================================================ */
+let fb = { app: null, auth: null, db: null, functions: null, storage: null };
+
+function initFirebase() {
+  if (!USE_FIREBASE) {
+    console.warn('[BuhSoft] Firebase config not set — running in local mode (Demo).');
+    return false;
+  }
+  try {
+    fb.app = firebase.initializeApp(firebaseConfig);
+    fb.auth = firebase.auth();
+    fb.db = firebase.firestore();
+    fb.functions = firebase.functions();
+    fb.storage = firebase.storage();
+    return true;
+  } catch (e) {
+    console.error('[BuhSoft] Firebase init error', e);
+    return false;
+  }
+}
+
+/* ============================================================
+   TOASTS / NOTIFICATIONS
+============================================================ */
+function toast(type = 'info', title = '', msg = '') {
+  const icons = {
+    success: '✓', error: '✕', warning: '!', info: 'i'
+  };
+  const container = $('#toastContainer');
+  const node = el('div', { class: `toast ${type}` },
+    el('div', { class: 'toast-icon', text: icons[type] || 'i' }),
+    el('div', { class: 'toast-content' },
+      el('div', { class: 'toast-title', text: title }),
+      msg ? el('div', { class: 'toast-msg', text: msg }) : null
+    ),
+    el('button', { class: 'toast-close', onclick: () => dismiss() },
+      el('span', { html: '&times;' })
+    )
+  );
+  container.appendChild(node);
+  const dismiss = () => {
+    node.classList.add('hide');
+    setTimeout(() => node.remove(), 300);
+  };
+  setTimeout(dismiss, 4200);
+}
+
+/* ============================================================
+   MODAL
+============================================================ */
+function openModal({ title, subtitle, body, footer, size }) {
+  const backdrop = $('#modalBackdrop');
+  const root = $('#modalRoot');
+  $('#modalTitle').textContent = title || '';
+  $('#modalSubtitle').textContent = subtitle || '';
+  const bodyEl = $('#modalBody');
+  bodyEl.innerHTML = '';
+  if (typeof body === 'string') bodyEl.innerHTML = body;
+  else if (body) bodyEl.appendChild(body);
+
+  const footerEl = $('#modalFooter');
+  footerEl.innerHTML = '';
+  if (footer) {
+    if (typeof footer === 'string') footerEl.innerHTML = footer;
+    else footerEl.appendChild(footer);
+  } else {
+    footerEl.style.display = 'none';
+  }
+  root.classList.remove('modal-sm','modal-lg');
+  if (size === 'sm') root.classList.add('modal-sm');
+  if (size === 'lg') root.classList.add('modal-lg');
+  backdrop.classList.add('open');
+}
+
+function closeModal() {
+  $('#modalBackdrop').classList.remove('open');
+}
+
+function confirmDialog(message, onConfirm, opts = {}) {
+  const ttl = opts.title || t('confirm');
+  const okText = opts.okText || t('confirm');
+  const cancelText = opts.cancelText || t('cancel');
+  openModal({
+    title: ttl,
+    body: el('p', { text: message }),
+    size: 'sm',
+    footer: (() => {
+      const wrap = el('div', { class: 'flex gap-2' });
+      wrap.appendChild(el('button', { class: 'btn btn-secondary', onclick: closeModal, text: cancelText }));
+      wrap.appendChild(el('button', { class: 'btn btn-danger', text: okText, onclick: () => { closeModal(); onConfirm(); } }));
+      return wrap;
+    })()
+  });
+}
+
+$('#modalClose').addEventListener('click', closeModal);
+$('#modalBackdrop').addEventListener('click', (e) => {
+  if (e.target === $('#modalBackdrop')) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ============================================================
+   AUTH FLOW
+============================================================ */
+function showAuthPage(which) {
+  ['loginPage','registerPage','forgotPage'].forEach(id => {
+    $('#' + id).classList.toggle('hidden', id !== which);
+  });
+  ['loginError','registerError','registerSuccess','forgotError','forgotSuccess'].forEach(id => {
+    const n = $('#' + id); if (n) { n.textContent = ''; n.classList.remove('show'); }
+  });
+}
+
+$('#goRegister').addEventListener('click', (e) => { e.preventDefault(); showAuthPage('registerPage'); });
+$('#goLogin').addEventListener('click', (e) => { e.preventDefault(); showAuthPage('loginPage'); });
+$('#goLogin2').addEventListener('click', (e) => { e.preventDefault(); showAuthPage('loginPage'); });
+$('#goForgot').addEventListener('click', (e) => { e.preventDefault(); showAuthPage('forgotPage'); });
+
+function showError(id, msg) {
+  const n = $('#' + id);
+  n.textContent = msg; n.classList.add('show');
+}
+
+/* ---- LOGIN ---- */
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const identifier = $('#loginIdentifier').value.trim();
+  const password = $('#loginPassword').value;
+  if (!identifier || !password) return;
+
+  const btn = $('#loginBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    let email = identifier;
+    if (!identifier.includes('@')) {
+      // Convert login → synthetic email (Firebase Auth requires email)
+      email = `${identifier.toLowerCase()}@buhsoft.local`;
+    }
+    if (state.demo || !USE_FIREBASE) {
+      // demo login
+      await new Promise(r => setTimeout(r, 600));
+      loginAsDemo(identifier);
+      return;
+    }
+    await fb.auth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged handles redirect
+  } catch (err) {
+    console.error(err);
+    let msg = err.message || t('errorGeneric');
+    if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      msg = state.lang === 'ru' ? 'Неверный логин или пароль' :
+            state.lang === 'en' ? 'Invalid login or password' :
+            '登录名或密码错误';
+    }
+    showError('loginError', msg);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+});
+
+/* ---- DEMO MODE ---- */
+function loginAsDemo(identifier) {
+  state.demo = true;
+  state.user = { uid: 'demo_user', email: identifier };
+  state.profile = {
+    uid: 'demo_user',
+    firstName: 'Demo',
+    lastName: 'User',
+    login: identifier,
+    role: 'admin',
+    status: 'active',
+    lang: state.lang,
+    currency: state.currency
+  };
+  state.isAdmin = true;
+  loadDemoData();
+  enterApp();
+  toast('info', t('demoMode'), t('demoBanner'));
+}
+
+/* ---- REGISTER ---- */
+let registrationState = {
+  codeRequested: false,
+  codeVerified: false,
+  expiresAt: 0,
+  attempts: 0,
+  code: null
+};
+
+$('#getCodeBtn').addEventListener('click', async () => {
+  const tg = $('#regTelegram').value.trim();
+  if (!tg) {
+    showError('registerError', t('telegramId') + ' — required');
+    return;
+  }
+  const btn = $('#getCodeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:#333"></span>';
+  try {
+    const res = await requestTelegramCode(tg);
+    registrationState.codeRequested = true;
+    registrationState.expiresAt = Date.now() + (res.expiresIn || 300) * 1000;
+    $('#codeInputs').classList.remove('hidden');
+    $('#codeStatus').textContent = t('codeSent');
+    // Focus first input
+    const firstInput = $('#codeInputs input');
+    if (firstInput) firstInput.focus();
+
+    // In demo / no-firebase mode generate local code
+    if (!USE_FIREBASE || state.demo) {
+      const demoCode = Math.floor(100000 + Math.random() * 900000).toString();
+      registrationState.code = demoCode;
+      toast('info', 'DEMO CODE', demoCode);
+      console.log('[DEMO] Telegram code:', demoCode);
+    }
+    checkCodeComplete();
+  } catch (err) {
+    console.error(err);
+    showError('registerError', err.message || t('errorGeneric'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t('getCode');
+  }
+});
+
+async function requestTelegramCode(telegram) {
+  if (USE_FIREBASE && fb.functions && !state.demo) {
+    const fn = fb.functions.httpsCallable('requestTelegramCode');
+    const r = await fn({ telegram, purpose: 'registration' });
+    return r.data;
+  }
+  return { ok: true, expiresIn: 300 };
+}
+
+async function verifyTelegramCode(code) {
+  if (USE_FIREBASE && fb.functions && !state.demo) {
+    const fn = fb.functions.httpsCallable('verifyTelegramCode');
+    const r = await fn({ code, telegram: $('#regTelegram').value.trim() });
+    return r.data;
+  }
+  // local
+  if (registrationState.code && registrationState.code === code && Date.now() < registrationState.expiresAt) {
+    return { ok: true };
+  }
+  throw new Error(t('codeWrong'));
+}
+
+$$('#codeInputs input').forEach((inp, idx, arr) => {
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
+    if (inp.value && idx < arr.length - 1) arr[idx + 1].focus();
+    checkCodeComplete();
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !inp.value && idx > 0) arr[idx - 1].focus();
+  });
+  inp.addEventListener('paste', (e) => {
+    const txt = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+    if (txt.length) {
+      e.preventDefault();
+      arr.forEach((i, k) => i.value = txt[k] || '');
+      checkCodeComplete();
+    }
+  });
+});
+
+async function checkCodeComplete() {
+  const inputs = $$('#codeInputs input');
+  const code = inputs.map(i => i.value).join('');
+  const statusEl = $('#codeStatus');
+  if (code.length === 6) {
+    try {
+      await verifyTelegramCode(code);
+      registrationState.codeVerified = true;
+      statusEl.textContent = '✓ ' + (state.lang === 'ru' ? 'Код подтверждён' : state.lang === 'en' ? 'Code verified' : '验证码已确认');
+      statusEl.style.color = 'var(--success)';
+      $('#registerBtn').disabled = false;
+      inputs.forEach(i => i.disabled = true);
+    } catch (err) {
+      registrationState.attempts++;
+      statusEl.textContent = '✕ ' + (err.message || t('codeWrong'));
+      statusEl.style.color = 'var(--danger)';
+      inputs.forEach(i => i.value = '');
+      inputs[0].focus();
+    }
+  } else {
+    statusEl.textContent = '';
+    $('#registerBtn').disabled = true;
+  }
+}
+
+$('#registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!registrationState.codeVerified) return;
+
+  const firstName = $('#regFirstName').value.trim();
+  const lastName = $('#regLastName').value.trim();
+  const login = $('#regLogin').value.trim();
+  const password = $('#regPassword').value;
+  const password2 = $('#regPassword2').value;
+  const telegram = $('#regTelegram').value.trim();
+
+  if (password !== password2) {
+    return showError('registerError', state.lang === 'ru' ? 'Пароли не совпадают' : state.lang === 'en' ? 'Passwords do not match' : '两次密码不一致');
+  }
+
+  const btn = $('#registerBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const email = `${login.toLowerCase()}@buhsoft.local`;
+
+    if (USE_FIREBASE && fb.auth && !state.demo) {
+      const cred = await fb.auth.createUserWithEmailAndPassword(email, password);
+      const user = cred.user;
+      await fb.db.collection('users').doc(user.uid).set({
+        uid: user.uid,
+        firstName, lastName, login, telegram,
+        email: null,
+        role: 'user',
+        status: 'active',
+        lang: state.lang,
+        currency: state.currency,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await logAudit('registration', { uid: user.uid, login });
+    } else {
+      // demo
+      state.user = { uid: 'demo_user_' + Date.now(), email };
+      state.profile = { uid: state.user.uid, firstName, lastName, login, telegram, role: 'user', status: 'active', lang: state.lang, currency: state.currency };
+      loadDemoData();
+      enterApp();
+    }
+
+    $('#registerSuccess').textContent = state.lang === 'ru' ? 'Аккаунт создан! Входим...' : state.lang === 'en' ? 'Account created! Signing in...' : '账户已创建！正在登录...';
+    $('#registerSuccess').classList.add('show');
+    // If real Firebase — onAuthStateChanged handles navigation
+  } catch (err) {
+    console.error(err);
+    let msg = err.message || t('errorGeneric');
+    if (err.code === 'auth/email-already-in-use') {
+      msg = state.lang === 'ru' ? 'Логин уже занят' : state.lang === 'en' ? 'Login already taken' : '登录名已被占用';
+    }
+    showError('registerError', msg);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+});
+
+/* ---- FORGOT ---- */
+$('#forgotForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('#forgotEmail').value.trim();
+  try {
+    if (USE_FIREBASE && fb.auth && !state.demo) {
+      await fb.auth.sendPasswordResetEmail(email);
+    } else {
+      await new Promise(r => setTimeout(r, 400));
+    }
+    $('#forgotSuccess').textContent = state.lang === 'ru' ? 'Ссылка отправлена на ' + email : state.lang === 'en' ? 'Link sent to ' + email : '链接已发送至 ' + email;
+    $('#forgotSuccess').classList.add('show');
+  } catch (err) {
+    showError('forgotError', err.message || t('errorGeneric'));
+  }
+});
+
+/* ---- DEMO MODE BUTTON ---- */
+$('#demoModeBtn').addEventListener('click', () => {
+  loginAsDemo('demo');
+});
+
+/* ---- LOGOUT ---- */
+$('#logoutBtn').addEventListener('click', async () => {
+  if (state.demo) {
+    state.demo = false; state.user = null; state.profile = null;
+    exitApp(); showAuthPage('loginPage');
+    return;
+  }
+  try { await logAudit('logout', { uid: state.user?.uid }); } catch (e) {}
+  if (fb.auth) await fb.auth.signOut();
+});
+
+/* ============================================================
+   AUTH STATE OBSERVER
+============================================================ */
+function watchAuth() {
+  if (!USE_FIREBASE || !fb.auth) return;
+  fb.auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      state.user = null; state.profile = null; state.isAdmin = false;
+      exitApp();
+      return;
+    }
+    state.user = user;
+    try {
+      const doc = await fb.db.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        state.profile = { uid: user.uid, ...doc.data() };
+      } else {
+        state.profile = { uid: user.uid, email: user.email, role: 'user', status: 'active' };
+      }
+      // admin via custom claim
+      const token = await user.getIdTokenResult();
+      state.isAdmin = !!token.claims.admin || state.profile.role === 'admin';
+      state.lang = state.profile.lang || state.lang;
+      state.currency = state.profile.currency || state.currency;
+    } catch (e) {
+      console.error(e);
+    }
+    await logAudit('login', { uid: user.uid });
+    enterApp();
+  });
+}
+
+/* ============================================================
+   AUDIT LOG
+============================================================ */
+async function logAudit(action, payload = {}) {
+  if (state.demo || !USE_FIREBASE || !fb.db) return;
+  try {
+    await fb.db.collection('audit_logs').add({
+      action,
+      payload,
+      uid: state.user?.uid || null,
+      login: state.profile?.login || null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) { console.warn('audit log failed', e); }
+}
+
+/* ============================================================
+   DEMO DATA
+============================================================ */
+function loadDemoData() {
+  const now = Date.now();
+  const iso = (offset) => new Date(now - offset).toISOString();
+
+  state.data.products = [
+    { id:'p1', name:'Ноутбук Lenovo IdeaPad', category:'Электроника', price:5400, currency:'TJS', quantity:12, unit:'шт', status:'active', createdAt:iso(86400000*20) },
+    { id:'p2', name:'Смартфон Samsung A54', category:'Электроника', price:3200, currency:'TJS', quantity:25, unit:'шт', status:'active', createdAt:iso(86400000*15) },
+    { id:'p3', name:'Канцелярский набор', category:'Офис', price:120, currency:'TJS', quantity:80, unit:'компл', status:'active', createdAt:iso(86400000*10) },
+    { id:'p4', name:'Услуга консультации', category:'Услуги', price:800, currency:'TJS', quantity:999, unit:'час', status:'active', createdAt:iso(86400000*5) },
+  ];
+
+  state.data.customers = [
+    { id:'c1', name:'ООО "Ромашка"', type:'client', contactPerson:'Иванов И.', phone:'+992 900 11 22 33', email:'info@romashka.tj', address:'Душанбе, ул. Рудаки 15', telegram:'@romashka', note:'VIP', createdAt:iso(86400000*30) },
+    { id:'c2', name:'ИП Сидоров', type:'client', contactPerson:'Сидоров А.', phone:'+992 901 55 66 77', email:'sidorov@mail.ru', address:'Худжанд', telegram:'@sidorov', createdAt:iso(86400000*20) },
+    { id:'s1', name:'Поставщик TechSupply', type:'supplier', contactPerson:'Петров П.', phone:'+992 933 77 88 99', email:'sales@techsupply.tj', address:'Душанбе', telegram:'@techsupply', createdAt:iso(86400000*40) },
+  ];
+
+  state.data.sales = [
+    { id:'s1', number:'SL-0001', date:iso(86400000*3), customerId:'c1', customerName:'ООО "Ромашка"',
+      items:[{ productId:'p1', name:'Ноутбук Lenovo IdeaPad', qty:2, price:5400 }],
+      subtotal:10800, discount:800, total:10000, currency:'TJS', payment:'cash', status:'paid', createdAt:iso(86400000*3) },
+    { id:'s2', number:'SL-0002', date:iso(86400000*1), customerId:'c2', customerName:'ИП Сидоров',
+      items:[{ productId:'p2', name:'Смартфон Samsung A54', qty:1, price:3200 }],
+      subtotal:3200, discount:0, total:3200, currency:'TJS', payment:'card', status:'partial', createdAt:iso(86400000*1) },
+  ];
+
+  state.data.purchases = [
+    { id:'pu1', number:'PU-0001', date:iso(86400000*10), supplierId:'s1', supplierName:'TechSupply',
+      items:[{ productId:'p1', name:'Ноутбук Lenovo IdeaPad', qty:10, price:4400 }],
+      subtotal:44000, discount:0, total:44000, currency:'TJS', payment:'transfer', status:'paid', createdAt:iso(86400000*10) }
+  ];
+
+  state.data.income = [
+    { id:'i1', category:'Продажи', amount:10000, currency:'TJS', date:iso(86400000*3), customerId:'c1', customerName:'ООО "Ромашка"', description:'Оплата по счёту SL-0001' },
+    { id:'i2', category:'Услуги', amount:3200, currency:'TJS', date:iso(86400000*1), customerId:'c2', customerName:'ИП Сидоров', description:'Консультация' },
+  ];
+
+  state.data.expenses = [
+    { id:'e1', category:'Аренда', amount:5000, currency:'TJS', date:iso(86400000*5), description:'Аренда офиса' },
+    { id:'e2', category:'Зарплата', amount:15000, currency:'TJS', date:iso(86400000*2), description:'Зарплата сотрудникам' },
+  ];
+
+  state.data.cash = [
+    { id:'ca1', type:'in', amount:10000, currency:'TJS', date:iso(86400000*3), description:'Оплата от ООО "Ромашка"' },
+    { id:'ca2', type:'out', amount:5000, currency:'TJS', date:iso(86400000*5), description:'Аренда офиса' },
+  ];
+
+  state.data.bank = [
+    { id:'b1', type:'in', amount:44000, currency:'TJS', date:iso(86400000*9), description:'Оплата поставщику', customerName:'TechSupply' },
+  ];
+
+  state.data.documents = [
+    { id:'d1', number:'INV-0001', type:'invoice', date:iso(86400000*3), author:'Demo User', status:'paid', amount:10000, currency:'TJS' },
+    { id:'d2', number:'INV-0002', type:'invoice', date:iso(86400000*1), author:'Demo User', status:'partial', amount:3200, currency:'TJS' },
+  ];
+
+  state.data.categories = {
+    income: ['Продажи','Услуги','Прочее'],
+    expense: ['Аренда','Зарплата','Коммунальные','Реклама','Прочее']
+  };
+
+  state.data.exchangeRates = {
+    TJS: 1,
+    RUB: 0.109,
+    USD: 0.092
+  };
+}
+
+/* ============================================================
+   ENTER / EXIT APP
+============================================================ */
+function enterApp() {
+  $('#authRoot').classList.add('hidden');
+  $('#appShell').classList.add('active');
+  applyTheme(state.theme);
+  applyLang(state.lang);
+  renderSidebar();
+  renderTopbarUser();
+  navigate(state.nav);
+  toast('success', t('appName'), t('loginBtn') + ': ' + (state.profile?.login || state.user?.email || ''));
+}
+
+function exitApp() {
+  $('#authRoot').classList.remove('hidden');
+  $('#appShell').classList.remove('active');
+  $('#mainContent').innerHTML = '';
+  $('#sidebar').innerHTML = '';
+}
+
+/* ============================================================
+   THEME / LANG / CURRENCY
+============================================================ */
+function applyTheme(theme) {
+  state.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('buh.theme', theme);
+}
+
+function applyLang(lang) {
+  state.lang = lang;
+  localStorage.setItem('buh.lang', lang);
+  document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh' : lang);
+  // Topbar
+  $$('#langSwitch button').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  // Apply data-i18n
+  $$('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
+  $$('[data-i18n-placeholder]').forEach(n => { n.placeholder = t(n.dataset.i18nPlaceholder); });
+}
+
+$$('#langSwitch button').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const lang = btn.dataset.lang;
+    applyLang(lang);
+    if (state.profile && !state.demo && USE_FIREBASE && fb.db) {
+      try { await fb.db.collection('users').doc(state.profile.uid).update({ lang }); } catch(e){}
+    }
+    if ($('#appShell').classList.contains('active')) {
+      renderSidebar();
+      navigate(state.nav);
+    }
+  });
+});
+
+/* ============================================================
+   SIDEBAR NAVIGATION MAP
+============================================================ */
+const NAV_MAP = [
+  { section: 'navMain', items: [
+    { key:'dashboard', icon:'grid', label:'dashboard' }
+  ]},
+  { section: 'navAccounting', items: [
+    { key:'sales',      icon:'cart',   label:'sales' },
+    { key:'purchases',  icon:'truck',  label:'purchases' },
+    { key:'income',     icon:'plus',   label:'income' },
+    { key:'expenses',   icon:'minus',  label:'expenses' },
+    { key:'cash',       icon:'cash',   label:'cash' },
+    { key:'bank',       icon:'bank',   label:'bank' },
+    { key:'products',   icon:'box',    label:'products' },
+    { key:'customers',  icon:'users',  label:'counterparties' },
+    { key:'documents',  icon:'file',   label:'documents' },
+  ]},
+  { section: 'navReports', items: [
+    { key:'reports',    icon:'chart',  label:'reports' },
+  ]},
+  { section: 'navSettings', items: [
+    { key:'settings',   icon:'cog',    label:'settings' },
+  ]},
+  { section: 'navAdmin', items: [
+    { key:'admin',      icon:'shield', label:'adminPanel', adminOnly: true }
+  ]}
+];
+
+const ICONS = {
+  grid:  '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  cart:  '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>',
+  truck: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  plus:  '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  minus: '<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  cash:  '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  bank:  '<path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>',
+  box:   '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  users: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
+  file:  '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  cog:   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+};
+
+function svg(icon, size = 17) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[icon] || ''}</svg>`;
+}
+
+function renderSidebar() {
+  const sidebar = $('#sidebar');
+  sidebar.innerHTML = '';
+  for (const section of NAV_MAP) {
+    if (section.items.every(i => i.adminOnly) && !state.isAdmin) continue;
+    const wrap = el('div', { class: 'sidebar-section' });
+    wrap.appendChild(el('div', { class: 'sidebar-section-title', text: t(section.section) }));
+    for (const item of section.items) {
+      if (item.adminOnly && !state.isAdmin) continue;
+      const node = el('div', {
+        class: 'sidebar-item' + (state.nav === item.key ? ' active' : ''),
+        onclick: () => { navigate(item.key); closeSidebar(); }
+      });
+      node.innerHTML = svg(item.icon) + `<span>${esc(t(item.label))}</span>`;
+      wrap.appendChild(node);
+    }
+    sidebar.appendChild(wrap);
+  }
+}
+
+function renderTopbarUser() {
+  const name = state.profile?.firstName
+    ? `${state.profile.firstName} ${state.profile.lastName || ''}`.trim()
+    : (state.profile?.login || state.user?.email || '—');
+  $('#userName').textContent = name;
+  $('#userRole').textContent = state.profile?.role || 'user';
+  $('#userAvatar').textContent = (name[0] || 'U').toUpperCase();
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function navigate(key) {
+  state.nav = key;
+  renderSidebar();
+  const main = $('#mainContent');
+  main.innerHTML = '';
+  const page = el('section', { class: 'page active' });
+  main.appendChild(page);
+  const renderers = {
+    dashboard:  renderDashboard,
+    sales:      renderSales,
+    purchases:  renderPurchases,
+    income:     renderIncome,
+    expenses:   renderExpenses,
+    cash:       renderCash,
+    bank:       renderBank,
+    products:   renderProducts,
+    customers:  renderCustomers,
+    documents:  renderDocuments,
+    reports:    renderReports,
+    settings:   renderSettings,
+    profile:    renderSettings,
+    admin:      renderAdmin,
+  };
+  (renderers[key] || renderDashboard)(page);
+}
+
+/* ---- Placeholder renderers (will be filled in next parts) ---- */
+function renderDashboard(page) {
+  page.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>${esc(t('dashboard'))}</h1>
+        <p>${esc(t('appTagline'))}</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>${esc(t('dashboard'))}</h3>
+      <p class="text-muted mt-2">Dashboard будет реализован в PART 2.</p>
+    </div>
+  `;
+}
+function renderProducts(page){ page.innerHTML = `<div class="card"><h3>${t('products')}</h3><p class="text-muted">PART 2</p></div>`; }
+function renderCustomers(page){ page.innerHTML = `<div class="card"><h3>${t('counterparties')}</h3><p class="text-muted">PART 2</p></div>`; }
+function renderSales(page){ page.innerHTML = `<div class="card"><h3>${t('sales')}</h3><p class="text-muted">PART 3</p></div>`; }
+function renderPurchases(page){ page.innerHTML = `<div class="card"><h3>${t('purchases')}</h3><p class="text-muted">PART 3</p></div>`; }
+function renderIncome(page){ page.innerHTML = `<div class="card"><h3>${t('income')}</h3><p class="text-muted">PART 3</p></div>`; }
+function renderExpenses(page){ page.innerHTML = `<div class="card"><h3>${t('expenses')}</h3><p class="text-muted">PART 3</p></div>`; }
+function renderCash(page){ page.innerHTML = `<div class="card"><h3>${t('cash')}</h3><p class="text-muted">PART 4</p></div>`; }
+function renderBank(page){ page.innerHTML = `<div class="card"><h3>${t('bank')}</h3><p class="text-muted">PART 4</p></div>`; }
+function renderDocuments(page){ page.innerHTML = `<div class="card"><h3>${t('documents')}</h3><p class="text-muted">PART 4</p></div>`; }
+function renderReports(page){ page.innerHTML = `<div class="card"><h3>${t('reports')}</h3><p class="text-muted">PART 4</p></div>`; }
+function renderSettings(page){ page.innerHTML = `<div class="card"><h3>${t('settings')}</h3><p class="text-muted">PART 2</p></div>`; }
+function renderAdmin(page){ page.innerHTML = `<div class="card"><h3>${t('adminPanel')}</h3><p class="text-muted">PART 5</p></div>`; }
+
+/* ============================================================
+   SIDEBAR (mobile)
+============================================================ */
+function openSidebar() {
+  $('#sidebar').classList.add('open');
+  $('#sidebarOverlay').classList.add('show');
+}
+function closeSidebar() {
+  $('#sidebar').classList.remove('open');
+  $('#sidebarOverlay').classList.remove('show');
+}
+$('#hamburgerBtn').addEventListener('click', openSidebar);
+$('#sidebarOverlay').addEventListener('click', closeSidebar);
+
+/* ============================================================
+   DROPDOWNS (user, notifications)
+============================================================ */
+$('#userMenuBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('#notifDropdown').classList.remove('open');
+  $('#userDropdown').classList.toggle('open');
+});
+$('#notifBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('#userDropdown').classList.remove('open');
+  $('#notifDropdown').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  $('#userDropdown').classList.remove('open');
+  $('#notifDropdown').classList.remove('open');
+  $('#searchResults').classList.remove('open');
+});
+$$('#userDropdown [data-nav]').forEach(n => {
+  n.addEventListener('click', () => navigate(n.dataset.nav));
+});
+
+/* ============================================================
+   GLOBAL SEARCH
+============================================================ */
+const doSearch = debounce((q) => {
+  const box = $('#searchResults');
+  if (!q || q.length < 2) { box.classList.remove('open'); return; }
+  const ql = q.toLowerCase();
+  const results = [];
+  const push = (type, title, sub, nav) => results.push({ type, title, sub, nav });
+
+  state.data.products.forEach(p => {
+    if ((p.name || '').toLowerCase().includes(ql)) push('product', p.name, t('products'), 'products');
+  });
+  state.data.customers.forEach(c => {
+    if ((c.name || '').toLowerCase().includes(ql)) push('customer', c.name, t('counterparties'), 'customers');
+  });
+  state.data.sales.forEach(s => {
+    if ((s.number || '').toLowerCase().includes(ql)) push('sale', s.number, t('sales'), 'sales');
+  });
+  state.data.purchases.forEach(p => {
+    if ((p.number || '').toLowerCase().includes(ql)) push('purchase', p.number, t('purchases'), 'purchases');
+  });
+  state.data.documents.forEach(d => {
+    if ((d.number || '').toLowerCase().includes(ql)) push('doc', d.number, t('documents'), 'documents');
+  });
+
+  if (!results.length) {
+    box.innerHTML = `<div class="dropdown-header">${esc(t('noResults') || 'Ничего не найдено')}</div>`;
+    box.classList.add('open');
+    return;
+  }
+  box.innerHTML = results.slice(0, 12).map(r => `
+    <div class="search-result-item" data-nav="${r.nav}">
+      <div class="search-result-icon">${svg('file', 16)}</div>
+      <div class="search-result-info">
+        <div class="t">${esc(r.title)}</div>
+        <div class="s">${esc(r.sub)}</div>
+      </div>
+    </div>
+  `).join('');
+  box.classList.add('open');
+  $$('#searchResults .search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      navigate(item.dataset.nav);
+      box.classList.remove('open');
+      $('#globalSearch').value = '';
+    });
+  });
+}, 180);
+
+$('#globalSearch').addEventListener('input', (e) => doSearch(e.target.value.trim()));
+
+/* ============================================================
+   BOOTSTRAP
+============================================================ */
+(async function boot() {
+  applyTheme(state.theme);
+  applyLang(state.lang);
+
+  const ok = initFirebase();
+  if (ok) {
+    watchAuth();
+  } else {
+    console.warn('[BuhSoft] Running in offline demo only.');
+  }
+
+  // Hide splash after 900ms
+  setTimeout(() => {
+    $('#splashScreen').classList.add('hide');
+    if (!ok) {
+      // auto-suggest demo mode
+      showAuthPage('loginPage');
+    }
+  }, 900);
+})();
+
+/* ============================================================
+   EXPORT GLOBALS (для следующих частей)
+============================================================ */
+window.BuhSoft = {
+  state, t, el, $, $$, esc, uid, fmtMoney, fmtDate, fmtDateTime,
+  toast, openModal, closeModal, confirmDialog, navigate, renderSidebar,
+  showAuthPage, loginAsDemo, svg, ICONS, NAV_MAP, CURRENCIES,
+  openSidebar, closeSidebar
+};
+</script>
+</body>
 </html>
